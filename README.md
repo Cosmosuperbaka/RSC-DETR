@@ -34,14 +34,17 @@ three datasets respectively.
 
 ## Repository layout
 
-This repository contains the **figure-rendering and evaluation code** used to
-produce the paper. It intentionally excludes datasets, training runs and model
-weights — those live on the experiment server (see
-[docs/PATHS.md](docs/PATHS.md)).
+This repository contains the **figure-rendering, evaluation and reproducibility
+tooling** for the paper. It intentionally excludes datasets, training runs and
+model weights — those live on the experiment server (see
+[docs/PATHS.md](docs/PATHS.md)), and are referenced through
+[`rscdetr_paths.py`](rscdetr_paths.py) rather than hard-coded paths.
 
 ```
 RSC-DETR/
+├── rscdetr_paths.py                    # every experiment path, env-var driven
 ├── figures/
+│   ├── render_fig1_motivation.py       # Fig. 1  (cross-modal confidence gap)
 │   ├── render_vedai_qualitative.py     # Fig. 7  (VEDAI qualitative comparison)
 │   ├── render_m3fd_qualitative.py      # Fig. 8  (M3FD-LT20 qualitative comparison)
 │   ├── render_dvtod_qualitative.py     # Fig. 9  (DVTOD qualitative comparison)
@@ -62,9 +65,32 @@ RSC-DETR/
 │   ├── scan_m3fd_yellow.py
 │   ├── scan_vedai_margin.py
 │   └── export_vedai_1033_materials.py
+├── environment/                        # the locked software stack
+│   ├── env-lock.yaml                   # OS / interpreter / CUDA / cuDNN / GPU
+│   ├── pip-freeze-rtdetrv2-py310.txt   # verbatim freeze, 122 packages
+│   └── README.md
+├── registry/
+│   └── experiments.yaml                # run -> config -> weights -> log -> metric
+├── benchmark/
+│   └── benchmark_latency.py            # enforces docs/BENCHMARK_PROTOCOL.md
+├── export/
+│   └── export_model.py                 # ONNX + TorchScript, with provenance
+├── tools/
+│   ├── collect_env.py                  # re-capture the environment lock
+│   ├── check_dataset.py                # dataset integrity gate
+│   └── hash_artifacts.py               # SHA-256 manifests for run directories
+├── tests/
+│   └── test_smoke.py                   # pytest regression gate
 └── docs/
-    └── PATHS.md                        # dataset / checkpoint / prediction layout
+    ├── PATHS.md                        # dataset / checkpoint / prediction layout
+    ├── REPRODUCIBILITY.md              # what exists, what is missing, in what order
+    ├── BENCHMARK_PROTOCOL.md           # the timing protocol — cite this
+    └── MULTISEED_PLAN.md               # the not-yet-run multi-seed job
 ```
+
+**Start with [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md)** if you are
+trying to reproduce a number. It tracks every artefact, says which ones are
+still missing, and orders the remaining work by cost.
 
 ### About the three qualitative figures
 
@@ -95,13 +121,33 @@ The three scripts were validated against Pillow 9.0.1 (Python 3.10); they use
 
 ## Environment
 
+The reported results were produced with a **locked** stack — conda env
+`rtdetrv2`, CPython 3.10.20, torch 2.1.2+cu121, cuDNN 8.9.2, on 8x RTX 4090
+(Ubuntu 22.04.5). The full record lives in
+[`environment/`](environment/README.md):
+
+| File | Purpose |
+|---|---|
+| [`environment/env-lock.yaml`](environment/env-lock.yaml) | OS, interpreter, framework, CUDA/cuDNN, GPU and driver versions |
+| [`environment/pip-freeze-rtdetrv2-py310.txt`](environment/pip-freeze-rtdetrv2-py310.txt) | verbatim `pip freeze`, 122 packages |
+
 ```bash
+# quick path: top-level dependencies only
 python3 -m pip install -r requirements.txt
+
+# exact rebuild of the environment that produced the paper
+conda create -n rscdetr python=3.10.20 -y && conda activate rscdetr
+pip install torch==2.1.2+cu121 torchvision==0.16.2+cu121 \
+    --index-url https://download.pytorch.org/whl/cu121
+pip install -r environment/pip-freeze-rtdetrv2-py310.txt
 ```
 
-`Pillow` is the only hard dependency of the figure renderers. The evaluation and
-analysis scripts additionally expect a working PyTorch / Ultralytics environment
-when they have to run inference instead of reading cached predictions.
+The `+cu121` wheel is not interchangeable with `+cu118`: it pulls a different
+cuDNN, which changes both throughput and (slightly) kernel numerics. If you
+change it, any latency figure from this repository becomes non-comparable, and
+the lock has to be re-captured with `python3 tools/collect_env.py --write`.
+
+For the figure renderers alone, `Pillow` is the only hard requirement.
 
 ## Data and checkpoints
 
@@ -158,6 +204,22 @@ predictions) and a **same-class IoU threshold of 0.50**.
 
 ## Notes on reproducibility
 
+**For the full picture, see [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md).**
+It lists every artefact behind every reported number, flags the ones that are
+still missing, and orders the remaining work. Short version:
+
+| Area | State |
+|---|---|
+| Dataset paths, configs, weights, logs | exist on the experiment server, indexed in [`registry/experiments.yaml`](registry/experiments.yaml) |
+| Software environment | **locked** — `environment/` |
+| Dataset integrity / regression gates | **in place** — `tools/check_dataset.py`, `tests/test_smoke.py` |
+| Timing protocol | **defined** — [docs/BENCHMARK_PROTOCOL.md](docs/BENCHMARK_PROTOCOL.md) |
+| Multi-seed mean ± std | **not yet run** — plan in [docs/MULTISEED_PLAN.md](docs/MULTISEED_PLAN.md) |
+| M3FD-LT20 headline AP | **unresolved** — manuscript says 55.90, the weight log says 55.95 |
+| DVTOD independent test split | **does not exist** — reported numbers are validation numbers |
+
+Specific caveats about the figures:
+
 * The qualitative panels are selected illustrative scenes, not dataset-level
   recall measurements. The scripts import cached `predictions.json` /
   YOLO `labels/*.txt` outputs; re-running inference may change individual scores.
@@ -166,6 +228,21 @@ predictions) and a **same-class IoU threshold of 0.50**.
   matches the same target.
 * Class-index conventions differ between the RT-DETR family (1-based COCO ids)
   and the YOLO-family runs (0-based). Each renderer normalises them locally.
+* **Fig. 1 is generated from real inference output, not hand-typed numbers.**
+  `figures/render_fig1_motivation.py` reads every score out of
+  `outputs/vedai_scene000004_single_modality/*.json`. If you change that figure,
+  keep it that way — a motivation figure whose numbers cannot be reproduced is
+  worse than no figure.
+
+## Checks you can run right now
+
+```bash
+python3 tools/check_dataset.py --dataset vedai     # dataset integrity gate
+pytest tests/ -v                                   # repository + numeric regression
+python3 tools/hash_artifacts.py --run <run_dir> --out manifests/<name>.json
+python3 tools/hash_artifacts.py --verify manifests/<name>.json
+python3 benchmark/benchmark_latency.py --help      # read the protocol first
+```
 
 ## Citation
 

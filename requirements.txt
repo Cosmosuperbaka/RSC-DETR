@@ -1,2 +1,43 @@
-Pillow>=9.0
-numpy>=1.20
+# RSC-DETR -- top-level dependencies
+#
+# These are the packages the repository itself imports. Pinned to the exact
+# versions recorded in environment/env-lock.yaml, which is what produced the
+# reported results.
+#
+# For a byte-exact rebuild of the whole environment (122 packages, including
+# transitive dependencies) use environment/pip-freeze-rtdetrv2-py310.txt
+# instead -- see environment/README.md.
+
+# --- core runtime ---------------------------------------------------------
+# +cu121 wheels are mandatory: a +cu118 wheel pulls a different cuDNN and
+# invalidates the latency protocol in docs/BENCHMARK_PROTOCOL.md.
+torch==2.1.2+cu121
+torchvision==0.16.2+cu121
+numpy==1.26.4
+Pillow==12.1.1
+
+# --- config / IO ----------------------------------------------------------
+PyYAML==6.0.3
+tqdm==4.70.0
+
+# --- figures and analysis -------------------------------------------------
+matplotlib==3.10.9
+pandas==2.3.3
+scipy==1.15.3
+opencv-python==4.11.0.86
+
+# --- training -------------------------------------------------------------
+einops==0.8.2
+timm==1.0.27
+tensorboard==2.20.0
+
+# --- evaluation -----------------------------------------------------------
+pycocotools==2.0.11
+faster-coco-eval==1.7.2
+
+# --- export / deployment --------------------------------------------------
+onnx==1.21.0
+onnxruntime-gpu==1.23.2
+
+# --- text processing (tokenizers pulled in by timm / detection heads) ------
+regex==2026.7.19

@@ -1,0 +1,134 @@
+# RSC-DETR experiment registry
+#
+# One entry per result that appears in the manuscript. The point of this file is
+# that a reader can go from a number in a table to the exact artefacts that
+# produced it, and vice versa.
+#
+# NOTHING in here may be typed by hand from memory. Every path, hash and metric
+# must be copied out of a run directory. Use tools/hash_artifacts.py to fill in
+# the hashes.
+#
+# Status:
+#   complete    - every field below is filled and verified
+#   partial     - some fields still pending (marked TODO)
+#   unresolved  - the number itself is in doubt, see docs/REPRODUCIBILITY.md
+
+schema_version: 1
+last_updated: "2026-10-03"
+
+# --------------------------------------------------------------------------
+# Conventions
+# --------------------------------------------------------------------------
+# paths are relative to RSCDETR_ROOT unless prefixed with ~
+# every metric must name the script and the split that produced it
+# --------------------------------------------------------------------------
+
+datasets:
+
+  vedai:
+    version: "Vehicules1024, 8-class"
+    annotation: "VEDAI/annotations/vedai_fold01_test_class8.json"
+    split: "official fold 1 for the headline table; folds 1-10 for the 10-fold summary"
+    image_count: {train: TODO, val: TODO, test: TODO}
+    input_size: 1024
+
+  m3fd_lt20:
+    version: "M3FD long-tailed, seed 42, 6-class"
+    annotation: "M3FD/processed/lt20_seed42/annotations/instances_test.json"
+    split: {train: TODO, val: TODO, test: TODO}
+    input_size: 1024
+    note: "a de-duplicated test variant circulated at some point; see the open item in docs/REPRODUCIBILITY.md"
+
+  dvtod:
+    version: "RTDOD_HBB_3class (Person / Car / Bicycle)"
+    annotation: "RTDOD_HBB_3class/annotations/instances_val.json"
+    split: {train: 1606, val: 573, test: "none yet"}
+    input_size: [1088, 1920]
+
+# --------------------------------------------------------------------------
+# Runs
+# --------------------------------------------------------------------------
+runs:
+
+  - id: vedai-baseline-fold01
+    dataset: vedai
+    method: "RT-DETR concat baseline"
+    seed: 3407
+    config: "rtdetrv2_pytorch/configs/rtdetrv2/rtdetrv2_r50vd_vedai_1024_concat_baseline_seed3407_30e.yml"
+    weights: "results/VEDAI/baseline-s3407-10fold/baseline-fold1/best.pth"
+    log: TODO
+    metrics:
+      AP: TODO
+      AP50: TODO
+      AP75: TODO
+    hashes: {config: TODO, weights: TODO, predictions: TODO}
+    status: partial
+
+  - id: vedai-rscdetr-fold01
+    dataset: vedai
+    method: "RSC-DETR"
+    seed: 3407
+    config: "rtdetrv2_pytorch/configs/rtdetrv2/rtdetrv2_r50vd_vedai_1024_test-x1x3-v19c-spsf_seed3407_fold01_30e.yml"
+    weights: "results/VEDAI/v19c-spsf-s3407-10fold/<fold>/best.pth"
+    log: TODO
+    metrics:
+      AP: TODO
+      AP50: TODO
+      AP75: TODO
+    hashes: {config: TODO, weights: TODO, predictions: TODO}
+    status: partial
+
+  - id: m3fd-rscdetr
+    dataset: m3fd_lt20
+    method: "RSC-DETR"
+    seed: 42
+    config: "rtdetrv2_pytorch/configs/rtdetrv2/rtdetrv2_r50vd_m3fd_lt20_seed42_x1x3_v19c_spsf_native_res_b8_45e.yml"
+    weights: TODO
+    log: TODO
+    metrics:
+      AP: 55.90          # manuscript table
+      AP_log: 55.95      # weight-provenance log -- DISCREPANCY, see below
+      AP50: TODO
+    hashes: {config: TODO, weights: TODO, predictions: TODO}
+    status: unresolved
+    note: >
+      Two AP values circulate for this run: 55.90 (manuscript) and 55.95
+      (weight-provenance log). Both point at the same run directory. This is
+      the number-one item in docs/REPRODUCIBILITY.md: re-evaluate the released
+      checkpoint once, record which split was used, and overwrite whichever
+      number turns out to be wrong.
+
+  - id: dvtod-rscdetr
+    dataset: dvtod
+    method: "RSC-DETR"
+    seed: 42
+    config: "rtdetrv2_pytorch/configs/rtdetrv2/rtdetrv2_r50vd_rtdod_hbb_seed42_1920_shdetr_15e_scaled.yml"
+    weights: "result/RTDOD_HBB_3class/<run>/"
+    log: "result/RTDOD_HBB_3class/<run>.log"
+    metrics:
+      AP: TODO
+      AP50: TODO
+      AP75: TODO
+    hashes: {config: TODO, weights: TODO, predictions: TODO}
+    status: partial
+    note: >
+      Four candidate configs exist (15e / 20e x concat / rscdetr, all
+      _scaled). The canonical one has not been declared. Fix that before
+      filling in the metrics.
+
+# --------------------------------------------------------------------------
+# Multi-seed runs -- not yet executed
+# --------------------------------------------------------------------------
+pending:
+  - id: multiseed
+    reason: "no reported number has an error bar yet"
+    plan: docs/MULTISEED_PLAN.md
+    seeds: [3407, 42, 2024]
+    datasets: [vedai, m3fd_lt20, dvtod]
+    status: blocked_on_compute
+
+  - id: latency
+    reason: "no timing has been measured under a controlled protocol"
+    protocol: docs/BENCHMARK_PROTOCOL.md
+    script: benchmark/benchmark_latency.py
+    status: blocked_on_compute

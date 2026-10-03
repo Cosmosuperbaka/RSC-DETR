@@ -1,0 +1,63 @@
+# RSC-DETR environment lock
+#
+# Everything in this file was read directly from the machine that produced the
+# reported results. It is the authoritative record of the software and hardware
+# stack behind the numbers in the manuscript.
+#
+# Regenerate with:  python3 tools/collect_env.py --write
+# (see environment/README.md for the full procedure)
+
+schema_version: 1
+captured_at: "2026-10-03"
+captured_on: "experiment server (8x RTX 4090, shared)"
+
+# --------------------------------------------------------------------------
+# Host
+# --------------------------------------------------------------------------
+host:
+  os: "Ubuntu 22.04.5 LTS"
+  os_id: ubuntu
+  os_version_id: "22.04"
+  kernel_gcc: "gcc (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0"
+
+# --------------------------------------------------------------------------
+# Interpreter and framework -- this is the environment that ran the paper
+# --------------------------------------------------------------------------
+runtime:
+  interpreter: "CPython 3.10.20"
+  interpreter_path: "/home/<user>/miniconda3/envs/rtdetrv2/bin/python"
+  environment_manager: conda
+  environment_name: rtdetrv2
+  pip: "see environment/pip-freeze-rtdetrv2-py310.txt"
+  package_count: 122
+
+frameworks:
+  torch: "2.1.2+cu121"
+  torchvision: "0.16.2+cu121"
+  cuda_built: "12.1"
+  cudnn: 8902            # 8.9.2
+  cxx11_abi: false
+  numpy: "1.26.4"
+  onnx: "1.21.0"
+  onnxruntime_gpu: "1.23.2"
+  faster_coco_eval: "1.7.2"
+
+# --------------------------------------------------------------------------
+# Hardware used for training and for the latency protocol
+# --------------------------------------------------------------------------
+hardware:
+  gpu_model: "NVIDIA GeForce RTX 4090"
+  gpu_count: 8
+  gpu_memory_mib: 24564
+  compute_capability: "8.9"
+  driver_version: "590.48.01"
+  nvrm: "590.48.01"
+
+# --------------------------------------------------------------------------
+# Notes that matter for reproduction
+# --------------------------------------------------------------------------
+notes:
+  - "torch and torchvision are the +cu121 builds; a +cu118 wheel changes the cuDNN version and invalidates the timing protocol."
+  - "cxx11_abi is false. Extensions compiled locally must match, otherwise import fails with an undefined-symbol error."
+  - "The machine is shared. Latency numbers must be produced with the protocol in docs/BENCHMARK_PROTOCOL.md, which pins the GPU and warms up before timing."
+  - "A second environment (~/.venv, torch 2.0.1+cu118) exists on the same host but was NOT used for the reported results."
