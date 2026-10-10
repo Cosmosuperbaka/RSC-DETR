@@ -1,0 +1,60 @@
+{
+  "method": "Original release final configurations vs renamed and pruned final configurations; CPU, random RGB/IR inputs (batch 2, 128x128); pretrained disabled; eval spatial cache disabled for small-input validation; final backbone/encoder/decoder architecture retained. Actual local training annotation statistics were read but are not packaged. Compare initialized state dict, inference tensors, postprocessed detections, training loss tensors and sampled gradients. No trained checkpoint loaded and no dataset accuracy measured.",
+  "train_cli_help": "passed",
+  "comparisons": {
+    "m3fd": {
+      "tensors_compared": 53,
+      "exact_match": true,
+      "maximum_absolute_difference": 0.0,
+      "model_state_sha256": "796b6328fbf275551d8c5347836b9718aa97c637f11885acc1ad7946958b8db7",
+      "parameter_count": 90102655,
+      "training_loss": 44.09999465942383,
+      "route": {
+        "native_affinity": 0.9419240836624774,
+        "native_fraction": 1.0,
+        "route": "native_reliability",
+        "density": 1.0,
+        "num_classes": 6,
+        "entropy": 0.706553171922852,
+        "evidence_mean": 0.9996399837655406,
+        "tail_risk": 0.33456594830893527,
+        "small_ratio": 0.4659880531512861
+      }
+    },
+    "vedai": {
+      "tensors_compared": 53,
+      "exact_match": true,
+      "maximum_absolute_difference": 0.0,
+      "model_state_sha256": "cb53537a086348cabe883028f3cfb5869498ad72f2d1f1601fb5cb4b122fad72",
+      "parameter_count": 90109332,
+      "training_loss": 44.11137008666992,
+      "route": {
+        "native_affinity": 0.0780375444272346,
+        "native_fraction": 0.0,
+        "route": "annotation_budget",
+        "density": 0.3760330578512397,
+        "num_classes": 8,
+        "entropy": 0.8261383269831295,
+        "evidence_mean": 0.939414985082327,
+        "tail_risk": 0.36496480564860106,
+        "small_ratio": 0.40445665445665446
+      }
+    }
+  },
+  "github_packaging_checks": {
+    "python_syntax": "passed",
+    "train_cli_import_after_notice_updates": "passed",
+    "nonempty_files": "passed",
+    "relative_readme_links": "passed",
+    "machine_specific_home_paths": "none",
+    "model_changes_in_github_cleanup": "none; comments and attribution only"
+  },
+  "model_name": "RSC-DETR",
+  "model_rename_checks": {
+    "python_ast_comparison": "all 68 Python files match rename-only changes",
+    "runtime_model_registration": "RSCDETR registered from src.zoo.rtdetr.rsc_detr",
+    "final_configuration_loading": "VEDAI and M3FD-LT20 passed",
+    "documentation_links": "passed",
+    "old_project_name_remaining": "none"
+  }
+}

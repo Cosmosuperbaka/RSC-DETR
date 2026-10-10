@@ -1,0 +1,12 @@
+Licensing scope
+
+Third-party portions retain their upstream licenses and copyright notices.
+See THIRD_PARTY_NOTICES.md, NOTICE, and LICENSES/ for the identified upstream
+projects and complete license texts.
+
+No project-wide license grant for the RSC-DETR-specific contributions was
+identified in the original project materials. This packaging operation does
+not select or grant a new license on behalf of the project authors.
+
+The paper source in docs/paper/ is reference material and is not covered by
+the third-party software license copies merely because it is in this package.

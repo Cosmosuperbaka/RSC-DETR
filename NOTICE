@@ -1,0 +1,15 @@
+RSC-DETR final source package
+
+This package retains code derived from RT-DETR/RT-DETRv2 by lyuwenyu,
+DETR by Facebook, Inc. and its affiliates, torchvision by its contributors,
+and a model EMA implementation attributed to pytorch-image-models (timm).
+Original source-file copyright notices are retained where present.
+
+Packaging modifications include selecting the final dependency closure,
+renaming RSC-DETR modules, flattening the two final experiment configurations,
+and specializing the final harmonization strategy. These modifications are
+documented in docs/FINAL_VERSION_AUDIT.json and docs/VALIDATION.json.
+
+Upstream license texts and attribution links are in LICENSES/ and
+THIRD_PARTY_NOTICES.md. This notice does not grant an additional project-wide
+license for the RSC-DETR-specific contributions.

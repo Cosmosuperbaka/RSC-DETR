@@ -1,15 +1,27 @@
 # Python
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 *.egg-info/
 .venv/
 venv/
+build/
+dist/
 
-# Editors / OS
+# Editors / OS / local secrets
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
+.env
+.env.*
+
+# WorkBuddy session data
+.workbuddy/
 
 # Renderer output — figures are regenerated on the experiment server
 out_qual/
@@ -17,11 +29,38 @@ outputs/
 figures/out/
 *.log
 
-# Datasets and checkpoints must never be committed
+# Datasets: ignore the data entities, keep the preparation README
 data/
-datasets/
-weights/
-*.pth
+datasets/*
+!datasets/README.md
+
+# Experiment artifacts
+runs/
+wandb/
+checkpoints/
+events.out.tfevents.*
+*.npy
+*.npz
+
+# Model weights: weights/*.pth is tracked through Git LFS (see .gitattributes);
+# every other weight format stays out of the repository.
 *.pt
 *.ckpt
 *.pkl
+*.onnx
+*.engine
+*.safetensors
+
+# Archives are distributed through GitHub Releases
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+
+# Generated LaTeX artifacts
+*.aux
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+*.synctex.gz

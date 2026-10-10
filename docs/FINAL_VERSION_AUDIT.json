@@ -1,0 +1,434 @@
+{
+  "source_root": "original dual-stream DETR release source (not included)",
+  "source_final_configs": [
+    "RSC-DETR_VEDAI.yml",
+    "RSC-DETR_M3FD-LT20.yml"
+  ],
+  "python_before": 177,
+  "python_after": 68,
+  "files_removed": [
+    "src/data/dataset/cifar_dataset.py",
+    "src/data/dataset/dronevehicle_dataset.py",
+    "src/data/dataset/multidataset_dual.py",
+    "src/data/dataset/rgbt_tiny_dataset.py",
+    "src/data/dataset/voc_detection.py",
+    "src/data/dataset/voc_eval.py",
+    "src/data/transforms/functional.py",
+    "src/data/transforms/presets.py",
+    "src/misc/box_ops.py",
+    "src/misc/lazy_loader.py",
+    "src/nn/arch/__init__.py",
+    "src/nn/arch/classification.py",
+    "src/nn/arch/yolo.py",
+    "src/nn/backbone/csp_darknet.py",
+    "src/nn/backbone/csp_resnet.py",
+    "src/nn/backbone/hgnetv2.py",
+    "src/nn/backbone/test_resnet.py",
+    "src/nn/backbone/timm_model.py",
+    "src/nn/backbone/torchvision_model.py",
+    "src/nn/backbone/utils.py",
+    "src/nn/criterion/__init__.py",
+    "src/nn/criterion/det_criterion.py",
+    "src/nn/postprocessor/__init__.py",
+    "src/nn/postprocessor/box_revert.py",
+    "src/nn/postprocessor/detr_postprocessor.py",
+    "src/nn/postprocessor/nms_postprocessor.py",
+    "src/solver/clas_engine.py",
+    "src/solver/clas_solver.py",
+    "src/zoo/rtdetr/adaptive_difficulty_classifier.py",
+    "src/zoo/rtdetr/adaptive_prototype_head_v9x.py",
+    "src/zoo/rtdetr/ca_spsf.py",
+    "src/zoo/rtdetr/carfcom_fusion.py",
+    "src/zoo/rtdetr/conver_params.py",
+    "src/zoo/rtdetr/criterion_consistency.py",
+    "src/zoo/rtdetr/criterion_consistency_v24b.py",
+    "src/zoo/rtdetr/criterion_v9x.py",
+    "src/zoo/rtdetr/criterion_x1.py",
+    "src/zoo/rtdetr/criterion_x1_v1.py",
+    "src/zoo/rtdetr/criterion_x1_v6.py",
+    "src/zoo/rtdetr/criterion_x1x3_calibrated.py",
+    "src/zoo/rtdetr/criterion_x1x3_pro2.py",
+    "src/zoo/rtdetr/criterion_x1x3_route_v16.py",
+    "src/zoo/rtdetr/criterion_x1x3_state_auto.py",
+    "src/zoo/rtdetr/criterion_x1x3_v12.py",
+    "src/zoo/rtdetr/criterion_x1x3_v13.py",
+    "src/zoo/rtdetr/criterion_x1x3_v14.py",
+    "src/zoo/rtdetr/criterion_x2.py",
+    "src/zoo/rtdetr/cross_modal_fusion.py",
+    "src/zoo/rtdetr/d2_coop.py",
+    "src/zoo/rtdetr/damr_mini.py",
+    "src/zoo/rtdetr/dataset_guard.py",
+    "src/zoo/rtdetr/deformable_cmaf.py",
+    "src/zoo/rtdetr/dual_prior_prototype_head.py",
+    "src/zoo/rtdetr/fine_classifier.py",
+    "src/zoo/rtdetr/free_gate_fusion.py",
+    "src/zoo/rtdetr/frequency_prior_prototype_head.py",
+    "src/zoo/rtdetr/gate_only_fusion.py",
+    "src/zoo/rtdetr/ilsg_fusion.py",
+    "src/zoo/rtdetr/ilsg_v2_fusion.py",
+    "src/zoo/rtdetr/ilsg_v3_fusion.py",
+    "src/zoo/rtdetr/localization_specific_spsf.py",
+    "src/zoo/rtdetr/maqr.py",
+    "src/zoo/rtdetr/matcher_camm.py",
+    "src/zoo/rtdetr/matcher_dcam.py",
+    "src/zoo/rtdetr/matcher_mpfw.py",
+    "src/zoo/rtdetr/matcher_size_aware.py",
+    "src/zoo/rtdetr/matcher_x3.py",
+    "src/zoo/rtdetr/matcher_x3_adaptive.py",
+    "src/zoo/rtdetr/matcher_x3_confusion.py",
+    "src/zoo/rtdetr/modality_reliability_fusion_x4.py",
+    "src/zoo/rtdetr/modality_specialized_fusion.py",
+    "src/zoo/rtdetr/moe_cmaf_fusion.py",
+    "src/zoo/rtdetr/moe_encoder.py",
+    "src/zoo/rtdetr/qmrm.py",
+    "src/zoo/rtdetr/rdbm.py",
+    "src/zoo/rtdetr/reliability_fusion_x4.py",
+    "src/zoo/rtdetr/rgb_edge_enhancer.py",
+    "src/zoo/rtdetr/rtdetr.py",
+    "src/zoo/rtdetr/rtdetr_criterion.py",
+    "src/zoo/rtdetr/rtdetr_decoder.py",
+    "src/zoo/rtdetr/rtdetrv2_criterion_align.py",
+    "src/zoo/rtdetr/rtdetrv2_criterion_cdr.py",
+    "src/zoo/rtdetr/rtdetrv2_criterion_cmcl.py",
+    "src/zoo/rtdetr/rtdetrv2_criterion_curriculum.py",
+    "src/zoo/rtdetr/rtdetrv2_criterion_multihead.py",
+    "src/zoo/rtdetr/rtdetrv2_criterion_multithresh.py",
+    "src/zoo/rtdetr/rtdetrv2_criterion_pairmargin.py",
+    "src/zoo/rtdetr/rtdetrv2_criterion_s4s5_relation.py",
+    "src/zoo/rtdetr/rtdetrv2_criterion_v8.py",
+    "src/zoo/rtdetr/rtdetrv2_criterion_v8c.py",
+    "src/zoo/rtdetr/rtdetrv2_criterion_v8d.py",
+    "src/zoo/rtdetr/rtdetrv2_decoder_multihead.py",
+    "src/zoo/rtdetr/rtdetrv2_decoder_v8.py",
+    "src/zoo/rtdetr/rtdetrv2_decoder_x1_ls_spsf.py",
+    "src/zoo/rtdetr/s5_residual_preservation.py",
+    "src/zoo/rtdetr/spatial_gate_fusion.py",
+    "src/zoo/rtdetr/tqf.py",
+    "src/zoo/rtdetr/ucs_cma_fusion.py",
+    "src/zoo/rtdetr/x1_fh_v6.py",
+    "src/zoo/rtdetr/x1_v6.py",
+    "src/zoo/rtdetr/x1_x3_balance_v12.py",
+    "src/zoo/rtdetr/x1_x3_balance_v13.py",
+    "src/zoo/rtdetr/x1_x3_pro2_coordinator.py",
+    "src/zoo/rtdetr/x1_x3_route_v16.py",
+    "src/zoo/rtdetr/x1_x3_state_auto.py",
+    "src/zoo/rtdetr/x1x3_calibrated_balance.py",
+    "src/zoo/rtdetr/x1x3_calibration.py",
+    "src/zoo/rtdetr/x3_static.py",
+    "src/zoo/rtdetr/x4_fh.py"
+  ],
+  "file_renames": {
+    "parameter_efficient_symmetric_fusion": "spsf",
+    "x1_v1": "pfhm",
+    "x1_fh": "pfhm_annotation_statistics",
+    "x3_v1": "acrhm",
+    "x3_fh": "acrhm_annotation_statistics",
+    "matcher_x3_v1": "acrhm_matcher",
+    "criterion_x3_v1": "acrhm_criterion",
+    "criterion_x1v1_x3v6": "harmonization_native_criterion",
+    "criterion_x1x3_v15": "harmonization_budget_criterion",
+    "criterion_x1x3_route_v17": "dynamic_harmonization_criterion",
+    "x1_x3_state_auto_v15": "dynamic_harmonization_coordinator",
+    "x1_x3_balance": "harmonization_balance",
+    "rtdetrv2_decoder_x1": "pfhm_decoder"
+  },
+  "symbol_renames": {
+    "MultiScaleSPSFFixedAlphaSingleScaleFusion": "SPSF",
+    "X1V1": "PFHM",
+    "X1V1Loss": "PFHMLoss",
+    "X1FineHeadGuard": "PFHMAnnotationAnalyzer",
+    "X1FHStaticStats": "PFHMAnnotationStats",
+    "X1FHStaticDecision": "PFHMAnnotationDecision",
+    "X3V1": "ACRHM",
+    "X3FineHeadGuard": "ACRHMAnnotationAnalyzer",
+    "X3FHStats": "ACRHMAnnotationStats",
+    "X3FHDecision": "ACRHMAnnotationDecision",
+    "X3FHOnlineAnalyzer": "ACRHMOnlineAnalyzer",
+    "HungarianMatcherX3V1": "ACRHMMatcher",
+    "RTDETRCriterionX3V1": "ACRHMCriterion",
+    "RTDETRCriterionX1X3AutoV3": "NativeHarmonizationCriterion",
+    "RTDETRCriterionX1X3V15": "BudgetHarmonizationCriterion",
+    "RTDETRCriterionX1X3RouteV17": "DynamicHarmonizationCriterion",
+    "X1X3V15Coordinator": "DynamicHarmonizationCoordinator",
+    "X1X3Balance": "HarmonizationBalance",
+    "X1X3BalanceState": "HarmonizationBalanceState",
+    "RTDETRTransformerv2X1V1": "PFHMDecoder",
+    "TransformerDecoderX1": "PFHMTransformerDecoder"
+  },
+  "configuration_policy": "Flatten final configs; retain only reachable registered component settings; preserve effective final settings.",
+  "compatibility": "Existing parameter/buffer attribute names and loss/output dictionary keys remain unchanged. balance_variant v19c is renamed to final_harmonization with all exact code selectors updated.",
+  "additional_symbol_renames": {
+    "v13_matcher_alpha": "reliability_matcher_alpha",
+    "v13_external_weights": "external_reliability_weights",
+    "X1X3AutoV3": "NativeHarmonizationCriterion",
+    "RouteV17": "DynamicHarmonizationCriterion"
+  },
+  "additional_cleanup": [
+    "Removed unused PResNetIR class",
+    "Extracted scale-normalization helper instead of retaining a different SPSF variant",
+    "Specialized HarmonizationBalance to final_harmonization and removed other experimental strategy branches",
+    "Removed unused class configuration blocks and flattened configuration inheritance"
+  ],
+  "original_dependency_closure_before_additional_cleanup": {
+    "src/zoo/rtdetr/rsc_detr.py": [
+      "RSCDETR"
+    ],
+    "src/zoo/rtdetr/hybrid_encoder.py": [
+      "CSPRepLayer",
+      "ConvNormLayer",
+      "HybridEncoder",
+      "RepVggBlock",
+      "TransformerEncoder",
+      "TransformerEncoderLayer"
+    ],
+    "src/zoo/rtdetr/parameter_efficient_symmetric_fusion.py": [
+      "MultiScaleSPSFFixedAlphaSingleScaleFusion",
+      "MultiScaleSPSFSingleScaleFusion",
+      "_SPSFFixedAlphaLayer",
+      "_SPSFLayer",
+      "_StaticSPSFSingleScaleBase",
+      "_conv_bn_act",
+      "_nearest_width_for_budget",
+      "fusion_param_count_formula",
+      "solve_pesf_widths"
+    ],
+    "src/zoo/rtdetr/rtdetrv2_decoder_x1.py": [
+      "RTDETRTransformerv2X1V1",
+      "TransformerDecoderX1"
+    ],
+    "src/zoo/rtdetr/criterion_x1x3_route_v17.py": [
+      "RTDETRCriterionX1X3RouteV17"
+    ],
+    "src/zoo/rtdetr/matcher_x3_v1.py": [
+      "HungarianMatcherX3V1"
+    ],
+    "src/zoo/rtdetr/matcher.py": [
+      "HungarianMatcher"
+    ],
+    "src/zoo/rtdetr/x1_x3_balance.py": [
+      "X1X3Balance",
+      "X1X3BalanceState",
+      "_clip"
+    ],
+    "src/zoo/rtdetr/x1_x3_state_auto_v15.py": [
+      "AnnotationState",
+      "X1X3V15Coordinator",
+      "_clip_float",
+      "_mean_one",
+      "annotation_state"
+    ],
+    "src/zoo/rtdetr/rtdetr_postprocessor.py": [
+      "RTDETRPostProcessor",
+      "mod"
+    ],
+    "src/zoo/rtdetr/s4_s5_relation_preservation.py": [
+      "S4S5RelationPreservationLoss",
+      "_target_boxes_xyxy_pixels"
+    ],
+    "src/zoo/rtdetr/denoising.py": [
+      "get_contrastive_denoising_training_group"
+    ],
+    "src/zoo/rtdetr/utils.py": [
+      "bias_init_with_prob",
+      "deformable_attention_core_func_v2",
+      "get_activation",
+      "inverse_sigmoid"
+    ],
+    "src/zoo/rtdetr/concat_fusion.py": [
+      "_ConcatFusionLayer"
+    ],
+    "src/zoo/rtdetr/rtdetrv2_decoder.py": [
+      "MLP",
+      "MSDeformableAttention",
+      "RTDETRTransformerv2",
+      "TransformerDecoder",
+      "TransformerDecoderLayer"
+    ],
+    "src/zoo/rtdetr/x1_v1.py": [
+      "X1V1",
+      "X1V1Loss",
+      "_bounded_mean_one"
+    ],
+    "src/zoo/rtdetr/criterion_x1v1_x3v6.py": [
+      "RTDETRCriterionX1X3AutoV3"
+    ],
+    "src/zoo/rtdetr/criterion_x1x3_v15.py": [
+      "RTDETRCriterionX1X3V15"
+    ],
+    "src/zoo/rtdetr/box_ops.py": [
+      "box_cxcywh_to_xyxy",
+      "box_iou",
+      "box_xyxy_to_cxcywh",
+      "generalized_box_iou"
+    ],
+    "src/zoo/rtdetr/x3_v1.py": [
+      "X3V1",
+      "_bounded_mean_one"
+    ],
+    "src/zoo/rtdetr/x1_fh.py": [
+      "X1FHStaticDecision",
+      "X1FHStaticStats",
+      "X1FineHeadGuard",
+      "_clip",
+      "_mean",
+      "_project_mean_one",
+      "_quantile",
+      "main"
+    ],
+    "src/zoo/rtdetr/x3_fh.py": [
+      "X3FHDecision",
+      "X3FHOnlineAnalyzer",
+      "X3FHStats",
+      "X3FineHeadGuard",
+      "_clip",
+      "_mean",
+      "_project_mean_one",
+      "main"
+    ],
+    "src/zoo/rtdetr/criterion_x3_v1.py": [
+      "RTDETRCriterionX3V1"
+    ],
+    "src/zoo/rtdetr/rtdetrv2_criterion.py": [
+      "RTDETRCriterionv2"
+    ]
+  },
+  "packaged_top_level_definitions": {
+    "src/zoo/rtdetr/__init__.py": [],
+    "src/zoo/rtdetr/acrhm.py": [
+      "_bounded_mean_one",
+      "ACRHM"
+    ],
+    "src/zoo/rtdetr/acrhm_annotation_statistics.py": [
+      "_clip",
+      "_mean",
+      "_project_mean_one",
+      "ACRHMAnnotationStats",
+      "ACRHMAnnotationDecision",
+      "ACRHMAnnotationAnalyzer",
+      "ACRHMOnlineAnalyzer",
+      "main"
+    ],
+    "src/zoo/rtdetr/acrhm_criterion.py": [
+      "ACRHMCriterion"
+    ],
+    "src/zoo/rtdetr/acrhm_matcher.py": [
+      "ACRHMMatcher"
+    ],
+    "src/zoo/rtdetr/box_ops.py": [
+      "box_cxcywh_to_xyxy",
+      "box_xyxy_to_cxcywh",
+      "box_iou",
+      "generalized_box_iou"
+    ],
+    "src/zoo/rtdetr/concat_fusion.py": [
+      "_ConcatFusionLayer"
+    ],
+    "src/zoo/rtdetr/denoising.py": [
+      "get_contrastive_denoising_training_group"
+    ],
+    "src/zoo/rtdetr/dynamic_harmonization_coordinator.py": [
+      "_clip_float",
+      "_mean_one",
+      "AnnotationState",
+      "annotation_state",
+      "DynamicHarmonizationCoordinator"
+    ],
+    "src/zoo/rtdetr/dynamic_harmonization_criterion.py": [
+      "DynamicHarmonizationCriterion"
+    ],
+    "src/zoo/rtdetr/harmonization_balance.py": [
+      "_clip",
+      "HarmonizationBalanceState",
+      "HarmonizationBalance"
+    ],
+    "src/zoo/rtdetr/harmonization_budget_criterion.py": [
+      "BudgetHarmonizationCriterion"
+    ],
+    "src/zoo/rtdetr/harmonization_native_criterion.py": [
+      "NativeHarmonizationCriterion"
+    ],
+    "src/zoo/rtdetr/hybrid_encoder.py": [
+      "ConvNormLayer",
+      "RepVggBlock",
+      "CSPRepLayer",
+      "TransformerEncoderLayer",
+      "TransformerEncoder",
+      "HybridEncoder"
+    ],
+    "src/zoo/rtdetr/matcher.py": [
+      "HungarianMatcher"
+    ],
+    "src/zoo/rtdetr/pfhm.py": [
+      "_bounded_mean_one",
+      "PFHM",
+      "PFHMLoss"
+    ],
+    "src/zoo/rtdetr/pfhm_annotation_statistics.py": [
+      "_clip",
+      "_mean",
+      "_quantile",
+      "_project_mean_one",
+      "PFHMAnnotationStats",
+      "PFHMAnnotationDecision",
+      "PFHMAnnotationAnalyzer",
+      "main"
+    ],
+    "src/zoo/rtdetr/pfhm_decoder.py": [
+      "PFHMTransformerDecoder",
+      "PFHMDecoder"
+    ],
+    "src/zoo/rtdetr/rsc_detr.py": [
+      "RSCDETR"
+    ],
+    "src/zoo/rtdetr/rtdetr_postprocessor.py": [
+      "mod",
+      "RTDETRPostProcessor"
+    ],
+    "src/zoo/rtdetr/rtdetrv2_criterion.py": [
+      "RTDETRCriterionv2"
+    ],
+    "src/zoo/rtdetr/rtdetrv2_decoder.py": [
+      "MLP",
+      "MSDeformableAttention",
+      "TransformerDecoderLayer",
+      "TransformerDecoder",
+      "RTDETRTransformerv2"
+    ],
+    "src/zoo/rtdetr/s4_s5_relation_preservation.py": [
+      "_target_boxes_xyxy_pixels",
+      "S4S5RelationPreservationLoss"
+    ],
+    "src/zoo/rtdetr/spsf.py": [
+      "_conv_bn_act",
+      "_SPSFLayer",
+      "_SPSFFixedAlphaLayer",
+      "fusion_param_count_formula",
+      "_nearest_width_for_budget",
+      "solve_pesf_widths",
+      "_normalize_scales",
+      "_StaticSPSFSingleScaleBase",
+      "SPSF"
+    ],
+    "src/zoo/rtdetr/utils.py": [
+      "inverse_sigmoid",
+      "bias_init_with_prob",
+      "deformable_attention_core_func_v2",
+      "get_activation"
+    ]
+  },
+  "github_packaging": [
+    "Added .gitignore and .gitattributes",
+    "Removed machine-specific source-root path",
+    "Included third-party license texts and notices",
+    "Preserved source copyright notices and added modification comments",
+    "Project-specific license grant is not inferred from packaging authorization"
+  ],
+  "model_name": "RSC-DETR",
+  "model_entrypoint": "src/zoo/rtdetr/rsc_detr.py:RSCDETR",
+  "model_rename_scope": [
+    "README, paper body and title, copyright modification comments and release notices",
+    "Configuration filenames, model registry entry and experiment output paths",
+    "Top-level detector implementation renamed to rsc_detr.py and RSCDETR",
+    "detr-all.zip artifact name retained as requested"
+  ]
+}

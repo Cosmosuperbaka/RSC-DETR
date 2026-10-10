@@ -1,0 +1,300 @@
+task: detection
+evaluator:
+  type: CocoEvaluator
+  iou_types:
+  - bbox
+num_classes: 9
+remap_mscoco_category: false
+train_dataloader:
+  type: DataLoader
+  dataset:
+    type: VEDAIDetection
+    img_folder: ./datasets/VEDAI/Vehicules1024
+    ann_file: ./datasets/VEDAI/annotations/vedai_fold01_train_class8.json
+    return_masks: false
+    transforms:
+      type: DualCompose
+      ops:
+      - type: RandomPhotometricDistort
+        p: 0.5
+      - type: RandomZoomOut
+        fill: 0
+      - type: RandomIoUCrop
+        p: 0.8
+      - type: SanitizeBoundingBoxes
+        min_size: 1
+      - type: RandomHorizontalFlip
+      - type: Resize
+        size:
+        - 1024
+        - 1024
+      - type: SanitizeBoundingBoxes
+        min_size: 1
+      - type: ConvertPILImage
+        dtype: float32
+        scale: true
+      - type: ConvertBoxes
+        fmt: cxcywh
+        normalize: true
+      policy:
+        name: stop_epoch
+        epoch: 27
+        ops:
+        - RandomPhotometricDistort
+        - RandomZoomOut
+        - RandomIoUCrop
+  shuffle: true
+  num_workers: 4
+  drop_last: true
+  collate_fn:
+    type: DualBatchImageCollateFunction
+    scales:
+    - 768
+    - 800
+    - 864
+    - 896
+    - 960
+    - 1024
+    - 1024
+    - 1024
+    stop_epoch: 27
+  total_batch_size: 4
+val_dataloader:
+  type: DataLoader
+  dataset:
+    type: VEDAIDetection
+    img_folder: ./datasets/VEDAI/Vehicules1024
+    ann_file: ./datasets/VEDAI/annotations/vedai_fold01_test_class8.json
+    return_masks: false
+    transforms:
+      type: DualCompose
+      ops:
+      - type: Resize
+        size:
+        - 1024
+        - 1024
+      - type: ConvertPILImage
+        dtype: float32
+        scale: true
+  shuffle: false
+  num_workers: 4
+  drop_last: false
+  collate_fn:
+    type: DualBatchImageCollateFunction
+  total_batch_size: 4
+print_freq: 100
+output_dir: ./outputs/RSC-DETR/VEDAI
+checkpoint_freq: 1
+sync_bn: true
+find_unused_parameters: false
+use_amp: true
+scaler:
+  type: GradScaler
+  enabled: true
+use_ema: true
+ema:
+  type: ModelEMA
+  decay: 0.9995
+  warmups: 500
+epoches: 30
+clip_max_norm: 0.1
+optimizer:
+  type: AdamW
+  params:
+  - params: ^(?=.*backbone)(?!.*norm).*$
+    lr: 1.0e-05
+  - params: ^(?=.*(?:encoder|decoder|fusion))(?=.*(?:norm|bn)).*$
+    weight_decay: 0.0
+  lr: 0.0001
+  betas:
+  - 0.9
+  - 0.999
+  weight_decay: 0.0001
+lr_scheduler:
+  type: MultiStepLR
+  milestones:
+  - 27
+  gamma: 0.1
+lr_warmup_scheduler:
+  type: LinearWarmup
+  warmup_duration: 500
+model: RSCDETR
+criterion: DynamicHarmonizationCriterion
+postprocessor: RTDETRPostProcessor
+use_focal_loss: true
+eval_spatial_size:
+- 1024
+- 1024
+PResNet:
+  depth: 50
+  variant: d
+  freeze_at: 1
+  return_idx:
+  - 1
+  - 2
+  - 3
+  num_stages: 4
+  freeze_norm: true
+  pretrained: true
+HybridEncoder:
+  in_channels:
+  - 512
+  - 1024
+  - 2048
+  feat_strides:
+  - 8
+  - 16
+  - 32
+  hidden_dim: 256
+  use_encoder_idx:
+  - 2
+  num_encoder_layers: 1
+  nhead: 8
+  dim_feedforward: 1024
+  dropout: 0.0
+  enc_act: gelu
+  expansion: 1.0
+  depth_mult: 1
+  act: silu
+RTDETRPostProcessor:
+  num_top_queries: 300
+seed: 3407
+tuning: ./pretrained/rtdetrv2_r50vd_6x_coco_ema_dual.pth
+RSCDETR:
+  backbone_rgb: PResNet
+  backbone_ir: PResNet
+  fusion: SPSF
+  encoder: HybridEncoder
+  decoder: PFHMDecoder
+save_last: true
+save_checkpoints: false
+save_best: true
+evaluate_test_during_training: false
+PFHMDecoder:
+  feat_channels:
+  - 256
+  - 256
+  - 256
+  feat_strides:
+  - 8
+  - 16
+  - 32
+  hidden_dim: 256
+  num_levels: 3
+  num_layers: 6
+  num_queries: 300
+  num_denoising: 100
+  label_noise_ratio: 0.5
+  box_noise_scale: 1.0
+  eval_idx: -1
+  num_points: 4
+  cross_attn_method: default
+  query_select_method: default
+  annotation_file: ./datasets/VEDAI/annotations/vedai_fold01_train_class8.json
+  category_ids:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  x1_num_classes: 8
+  fine_temperature: 8.0
+  fine_learnable_temperature: true
+DynamicHarmonizationCriterion:
+  weight_dict:
+    loss_vfl: 1
+    loss_bbox: 5
+    loss_giou: 2
+  losses:
+  - vfl
+  - boxes
+  alpha: 0.75
+  gamma: 2.0
+  class_axis_normalization_power: 0.0
+  quality_target_floor: 0.0
+  final_loss_scale: 1.0
+  log_interval: 500
+  annotation_file: ./datasets/VEDAI/annotations/vedai_fold01_train_class8.json
+  category_ids:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  x1_num_classes: 8
+  total_updates: 8160
+  diagnostics_path: ./outputs/RSC-DETR/VEDAI/dynamic_harmonization_diagnostics.jsonl
+  matcher:
+    type: ACRHMMatcher
+    weight_dict:
+      cost_class: 2
+      cost_bbox: 5
+      cost_giou: 2
+    alpha: 0.25
+    gamma: 2.0
+    ema_momentum: 0.93
+    annotation_file: ./datasets/VEDAI/annotations/vedai_fold01_train_class8.json
+    category_ids:
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    total_updates: 8160
+  coordinator:
+    type: DynamicHarmonizationCoordinator
+    annotation_file: ./datasets/VEDAI/annotations/vedai_fold01_train_class8.json
+    category_ids:
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    total_updates: 8160
+  baseline_matcher:
+    type: HungarianMatcher
+    weight_dict:
+      cost_class: 2
+      cost_bbox: 5
+      cost_giou: 2
+    alpha: 0.25
+    gamma: 2.0
+  balance:
+    type: HarmonizationBalance
+    total_updates: 8160
+    annotation_file: ./datasets/VEDAI/annotations/vedai_fold01_train_class8.json
+    category_ids:
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    print_interval: 500
+    balance_variant: final_harmonization
+runtime_diagnostics: true
+runtime_diagnostics_interval: 200
+runtime_diagnostics_path: ./outputs/RSC-DETR/VEDAI/runtime_diagnostics.jsonl
+SPSF:
+  in_channels:
+  - 512
+  - 1024
+  - 2048
+  base_ratio: 0.75
+  enabled_scales:
+  - S5
+  alpha_fixed: 0.5

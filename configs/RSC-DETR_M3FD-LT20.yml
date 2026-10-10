@@ -1,0 +1,285 @@
+task: detection
+evaluator:
+  type: CocoEvaluator
+  iou_types:
+  - bbox
+num_classes: 6
+remap_mscoco_category: false
+train_dataloader:
+  type: DataLoader
+  dataset:
+    type: M3FDDetection
+    img_folder: ./datasets/M3FD lt20/visible
+    ir_folder: ./datasets/M3FD lt20/infrared
+    ann_file: ./datasets/M3FD lt20/annotations/instances_train.json
+    return_masks: false
+    transforms:
+      type: DualCompose
+      ops:
+      - type: RandomPhotometricDistort
+        p: 0.5
+      - type: RandomHorizontalFlip
+      - type: ConvertPILImage
+        dtype: float32
+        scale: true
+      - type: ConvertBoxes
+        fmt: cxcywh
+        normalize: true
+      policy:
+        name: default
+        epoch: 36
+        ops:
+        - RandomPhotometricDistort
+        - RandomZoomOut
+        - RandomIoUCrop
+  shuffle: true
+  num_workers: 4
+  drop_last: true
+  collate_fn:
+    type: DualBatchImagePadCollateFunction
+    scales:
+    - 480
+    - 512
+    - 544
+    - 576
+    - 608
+    - 640
+    - 640
+    - 640
+    stop_epoch: 36
+    size_divisibility: 32
+  total_batch_size: 8
+val_dataloader:
+  type: DataLoader
+  dataset:
+    type: M3FDDetection
+    img_folder: ./datasets/M3FD lt20/visible
+    ir_folder: ./datasets/M3FD lt20/infrared
+    ann_file: ./datasets/M3FD lt20/annotations/instances_val.json
+    return_masks: false
+    transforms:
+      type: DualCompose
+      ops:
+      - type: ConvertPILImage
+        dtype: float32
+        scale: true
+  shuffle: false
+  num_workers: 4
+  drop_last: false
+  collate_fn:
+    type: DualBatchImagePadCollateFunction
+    size_divisibility: 32
+  total_batch_size: 8
+test_dataloader:
+  type: DataLoader
+  dataset:
+    type: M3FDDetection
+    img_folder: ./datasets/M3FD lt20/visible
+    ir_folder: ./datasets/M3FD lt20/infrared
+    ann_file: ./datasets/M3FD lt20/annotations/instances_test.json
+    return_masks: false
+    transforms:
+      type: DualCompose
+      ops:
+      - type: ConvertPILImage
+        dtype: float32
+        scale: true
+  shuffle: false
+  num_workers: 4
+  drop_last: false
+  collate_fn:
+    type: DualBatchImagePadCollateFunction
+    size_divisibility: 32
+  total_batch_size: 8
+print_freq: 100
+output_dir: ./outputs/RSC-DETR/M3FD-LT20
+checkpoint_freq: 1
+sync_bn: true
+find_unused_parameters: false
+use_amp: true
+scaler:
+  type: GradScaler
+  enabled: true
+use_ema: true
+ema:
+  type: ModelEMA
+  decay: 0.9995
+  warmups: 1000
+epoches: 45
+clip_max_norm: 0.1
+optimizer:
+  type: AdamW
+  params:
+  - params: ^(?=.*backbone)(?!.*norm).*$
+    lr: 1.0e-05
+  - params: ^(?=.*(?:encoder|decoder|fusion))(?=.*(?:norm|bn)).*$
+    weight_decay: 0.0
+  lr: 0.0001
+  betas:
+  - 0.9
+  - 0.999
+  weight_decay: 0.0001
+lr_scheduler:
+  type: MultiStepLR
+  milestones:
+  - 36
+  gamma: 0.1
+lr_warmup_scheduler:
+  type: LinearWarmup
+  warmup_duration: 1000
+model: RSCDETR
+criterion: DynamicHarmonizationCriterion
+postprocessor: RTDETRPostProcessor
+use_focal_loss: true
+eval_spatial_size: null
+PResNet:
+  depth: 50
+  variant: d
+  freeze_at: 1
+  return_idx:
+  - 1
+  - 2
+  - 3
+  num_stages: 4
+  freeze_norm: true
+  pretrained: true
+HybridEncoder:
+  in_channels:
+  - 512
+  - 1024
+  - 2048
+  feat_strides:
+  - 8
+  - 16
+  - 32
+  hidden_dim: 256
+  use_encoder_idx:
+  - 2
+  num_encoder_layers: 1
+  nhead: 8
+  dim_feedforward: 1024
+  dropout: 0.0
+  enc_act: gelu
+  expansion: 1.0
+  depth_mult: 1
+  act: silu
+RTDETRPostProcessor:
+  num_top_queries: 300
+seed: 42
+tuning: ./pretrained/rtdetrv2_r50vd_6x_coco_ema_dual.pth
+RSCDETR:
+  backbone_rgb: PResNet
+  backbone_ir: PResNet
+  fusion: SPSF
+  encoder: HybridEncoder
+  decoder: PFHMDecoder
+save_last: true
+save_checkpoints: false
+save_best: true
+PFHMDecoder:
+  feat_channels:
+  - 256
+  - 256
+  - 256
+  feat_strides:
+  - 8
+  - 16
+  - 32
+  hidden_dim: 256
+  num_levels: 3
+  num_layers: 6
+  num_queries: 300
+  num_denoising: 100
+  label_noise_ratio: 0.5
+  box_noise_scale: 1.0
+  eval_idx: -1
+  num_points:
+  - 4
+  - 4
+  - 4
+  cross_attn_method: default
+  query_select_method: default
+  annotation_file: ./datasets/M3FD lt20/annotations/instances_train.json
+  category_ids:
+  - 0
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  x1_num_classes: 6
+  fine_temperature: 8.0
+  fine_learnable_temperature: true
+evaluate_test_during_training: true
+DynamicHarmonizationCriterion:
+  weight_dict:
+    loss_vfl: 1
+    loss_bbox: 5
+    loss_giou: 2
+  losses:
+  - vfl
+  - boxes
+  alpha: 0.75
+  gamma: 2.0
+  annotation_file: ./datasets/M3FD lt20/annotations/instances_train.json
+  category_ids:
+  - 0
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  x1_num_classes: 6
+  total_updates: 8010
+  matcher:
+    type: ACRHMMatcher
+    weight_dict:
+      cost_class: 2
+      cost_bbox: 5
+      cost_giou: 2
+    alpha: 0.25
+    gamma: 2.0
+    annotation_file: ./datasets/M3FD lt20/annotations/instances_train.json
+    category_ids:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    ema_momentum: 0.93
+    total_updates: 8010
+  baseline_matcher:
+    type: HungarianMatcher
+    weight_dict:
+      cost_class: 2
+      cost_bbox: 5
+      cost_giou: 2
+    alpha: 0.25
+    gamma: 2.0
+  balance:
+    type: HarmonizationBalance
+    total_updates: 8010
+    annotation_file: ./datasets/M3FD lt20/annotations/instances_train.json
+    category_ids:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    print_interval: 500
+    balance_variant: final_harmonization
+  diagnostics_path: ./outputs/RSC-DETR/M3FD-LT20/dynamic_harmonization_diagnostics.jsonl
+runtime_diagnostics: true
+runtime_diagnostics_interval: 200
+runtime_diagnostics_path: ./outputs/RSC-DETR/M3FD-LT20/runtime_diagnostics.jsonl
+SPSF:
+  in_channels:
+  - 512
+  - 1024
+  - 2048
+  base_ratio: 0.75
+  enabled_scales:
+  - S5
+  alpha_fixed: 0.5

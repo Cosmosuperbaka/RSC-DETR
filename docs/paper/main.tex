@@ -1,0 +1,1142 @@
+\documentclass[letterpaper,journal]{IEEEtran}
+\usepackage{amsmath,amsfonts}
+\usepackage{amssymb}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{newtxtext}
+\usepackage{newtxmath}
+\usepackage[caption=false,font=normalsize,labelfont=sf,textfont=sf]{subfig}
+% \usepackage{stfloats}
+\usepackage{cuted}
+\usepackage{flafter}
+\usepackage{textcomp}
+\usepackage{url}
+\usepackage{cite}
+\usepackage{hhline}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage[normalem]{ulem}
+\newcommand{\fixedtablecaption}[2]{\refstepcounter{table}{\footnotesize TABLE~\Roman{table}\\#1\label{#2}}\par\vspace{0.12\baselineskip}}
+\newenvironment{fixedblock}{\par\vspace{0.45\baselineskip}\noindent\begin{minipage}{\columnwidth}\centering}{\end{minipage}\par\vspace{0.45\baselineskip}}
+\setlength{\textfloatsep}{14pt plus 1pt minus 1pt}
+\setlength{\dbltextfloatsep}{14pt plus 1pt minus 1pt}
+\setlength{\floatsep}{14pt plus 1pt minus 1pt}
+\setlength{\dblfloatsep}{14pt plus 1pt minus 1pt}
+\renewcommand{\baselinestretch}{1.0}
+\setlength{\parskip}{0pt}
+\setlength{\parsep}{0pt}
+\hyphenation{RT-DETR Hungarian Transformer}
+\usepackage[colorlinks=true,allcolors=blue,bookmarks=false,pdfpagemode={UseNone}]{hyperref}
+
+\begin{document}
+\flushbottom
+
+\title{RSC-DETR: Symmetric Harmonized Dual-Stream DETR for Long-Tailed RGB-IR Object Detection}
+
+\author{Yi Chen, Lingjun Deng, Chuanhao Zhong, Chang Liu, and Yanni Dong%
+\thanks{This study was supported by the National Natural Science Foundation
+of China under Grant U2541203. The numerical calculations in this paper have been done on the supercomputing system in the Supercomputing Center of Wuhan University. Yi Chen and Lingjun Deng contributed equally
+to this work. (\textit{Corresponding author: Yanni Dong and Chang Liu}.)}%
+\thanks{Yi Chen, Lingjun Deng, Chuanhao Zhong, Chang Liu, and Yanni Dong are 
+with the School of Resource and Environmental Sciences, Wuhan University,
+Wuhan 430079, China (e-mail: 2024302051079@whu.edu.cn; 2024302051086@whu.edu.cn; 2025312051055@whu.edu.cn; liu\_chang\_@whu.edu.cn; dongyanni@whu.edu.cn).}}
+
+\markboth{IEEE JOURNAL OF SELECTED TOPICS IN APPLIED EARTH OBSERVATIONS AND REMOTE SENSING}%
+{RSC-DETR: Symmetric Harmonization for Long-Tailed RGB--IR Object Detection}
+
+\maketitle
+
+\begin{abstract}
+RGB--IR object detection exploits the complementary characteristics of visible and infrared imagery to improve robustness under challenging illumination and weather conditions. However, long-tailed RGB--IR detection remains constrained by cross-modal representation interference, inconsistent classification and localization quality, and unreliable supervision for tail categories under sparse one-to-one Hungarian matching. To address these coupled problems, we propose RSC-DETR, a Symmetric Harmonized Dual-Stream DETR framework built upon RT-DETR. First, the Shared--Private Symmetric Fusion (SPSF) module explicitly models a shared semantic center and symmetric modality-specific deviations at the high-level feature stage, reducing redundant and inconsistent cross-modal responses before they enter the encoder and decoder. Second, the Prototype-guided Fine-localization Harmonization (PFHM) module transfers the localization quality of matched queries into prototype-based classification supervision through IoU-aware soft targets, encouraging classification confidence to remain consistent with bounding-box precision. Third, the Annotation-guided Class-reliability Harmonization (ACRHM) module combines dataset-level annotation priors with online matching statistics to dynamically estimate class reliability and calibrate class-specific supervision under long-tailed distributions. A unified dynamic harmonization strategy further coordinates PFHM and ACRHM according to training progress, prototype maturity, localization quality, and online class states, thereby reducing conflicts among auxiliary and primary detection objectives. RSC-DETR retains the original RT-DETR inference pathway while consistently improving overall detection performance, tail-category recognition, and high-quality localization across multiple long-tailed RGB--IR benchmarks.
+\end{abstract}
+
+\begin{IEEEkeywords}
+RGB--IR object detection, long-tailed distribution, RT-DETR, RGB--IR fusion, dynamic calibration, hard example mining.
+\end{IEEEkeywords}
+
+\section{Introduction}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[
+    width=0.9\columnwidth,
+    keepaspectratio
+]{e03341b080c872fa052af4cbb5fd0193.png}
+\caption{RGB--IR Cross-Modal Confidence Gap. For the same ground-truth car (green), the naive concat-merged RT-DETR baseline produces substantially higher confidence in the RGB view (red dashed; 0.60) than in the IR view (red dashed; 0.15), revealing a cross-modal confidence gap that naive feature concatenation fails to bridge.}
+\label{fig:motivation}
+\end{figure}
+
+Real-time end-to-end detectors, exemplified by RT-DETR \cite{rtdetr,yolo}, achieve a favorable trade-off between accuracy and inference speed under monocular visible-light inputs. However, prevailing studies indicate that such methods heavily rely on texture and color cues from visible imagery. Under complex scenarios such as nighttime, strong illumination, and shadows, imaging quality degrades significantly, leaving detectors devoid of reliable discriminative clues \cite{kaist}. In contrast, infrared imaging, grounded in thermal radiation mechanisms, offers inherent robustness to illumination variations and yields stable thermal responses and target contours. Nevertheless, the absence of color and fine-grained texture information restricts the model's capacity to distinguish between semantically similar categories \cite{cft}. Given the natural complementarity between visible and infrared modalities in representational capacity, multi-modal two-stream architectures have emerged as the predominant paradigm for object detection \cite{deyolo,m2dlif}. Currently, visible-infrared detection is extensively deployed in applications ranging from aerial remote sensing for vehicle surveillance to day--night road scene perception \cite{vedai,tardal_m3fd}.
+
+However, the realization of this complementarity hinges on the fusion strategy. Naive feature concatenation or weighted summation fails to bridge the pronounced statistical distribution gap between RGB and IR modalities \cite{c2former}. As illustrated in Fig.~\ref{fig:motivation}, the divergent visual representations of the two modalities lead to a persistent misalignment in prediction queries, characterized by high classification confidence coexisting with low localization precision \cite{varifocalnet}. This indicates that semantic conflicts persisting after feature fusion continue to misguide localization supervision.
+
+Existing RGB--IR detectors primarily improve multimodal representations through feature concatenation, convolutional compression, attention calibration, or Transformer-based interaction. Representative methods such as Halfway Fusion \cite{halfway}, GAFF \cite{gaff}, ICA Fusion \cite{icafusion}, and C$^2$Former \cite{c2former} progressively enhance cross-modal information exchange from local feature aggregation to global dependency modeling. Nevertheless, these approaches mainly focus on strengthening feature interaction itself, while heterogeneous modality statistics, registration errors, and modality-specific noise may remain entangled after fusion and subsequently propagate to the detection head \cite{c2former,damsdet}. Such interference is particularly harmful to high-level semantic representations that directly participate in DETR encoding and decoding \cite{detr,rtdetr}. To alleviate this problem, we introduce the Shared--Private Symmetric Fusion (SPSF) module, which explicitly models shared cross-modal semantics and modality-specific variations to obtain more stable and less redundant high-level fused representations.
+
+A second challenge arises from the inconsistency between classification confidence and localization quality. This discrepancy has been widely recognized in object detection, and localization-quality-aware methods such as GFL and VarifocalNet explicitly incorporate localization quality into classification scores \cite{gfl,varifocalnet}. In DETR-like detectors, one-to-one Hungarian matching assigns each ground-truth instance to a single prediction in the primary set-prediction objective \cite{detr}, resulting in inherently sparse positive supervision. Moreover, a query assigned to the correct category does not necessarily correspond to an accurately localized bounding box, particularly for small objects, visually ambiguous instances, and samples affected by cross-modal noise. Unlike quality-aware dense detectors, the standard DETR classification target does not explicitly encode the localization quality of a matched bounding box \cite{detr,varifocalnet}. To address this mismatch, we develop the Prototype-guided Fine-localization Harmonization (PFHM) module, which incorporates IoU-aware prototype supervision to encourage the classification representation of matched queries to remain consistent with their localization quality.
+
+The third challenge lies in the unreliable supervision of long-tailed categories. Long-tailed object detection is characterized by severe imbalance in the amount of supervision available to head and tail categories, causing rare classes to receive substantially fewer effective training signals \cite{bags,seesaw,eqlv2}. Under the sparse one-to-one matching paradigm of DETR, this imbalance further limits the number of positive queries accumulated by tail classes during training \cite{detr}. Conventional long-tailed strategies, such as Seesaw Loss \cite{seesaw} and EQL v2 \cite{eqlv2}, mainly rebalance optimization according to class-related statistics or accumulated gradient information. However, these statistics do not explicitly reflect the evolving reliability of each category under sparse matching and cross-modal perturbations. Static or globally determined re-weighting may consequently overemphasize noisy tail-class supervision or insufficiently correct persistent head-class dominance. We therefore introduce the Annotation-guided Class-reliability Harmonization (ACRHM) module, which combines annotation priors with online matching statistics to dynamically calibrate class-specific supervision. PFHM and ACRHM are further coordinated through a unified dynamic harmonization strategy so that localization-quality and class-reliability supervision are introduced with adaptive training intensities.
+
+To address these structural limitations, we propose RSC-DETR, a unified detection framework built upon a dual-stream RT-DETR backbone. The main contributions of this paper are summarized as follows:
+\begin{itemize}
+\item We propose RSC-DETR, a unified training framework based on concat-merged RT-DETR, which jointly addresses the coupled problems of cross-modal representation learning, query localization quality, and class-reliability calibration in long-tailed RGB--IR detection.
+\item To mitigate modality interference in high-level fusion, we introduce the SPSF module. By explicitly modeling the shared semantic center and symmetric cross-modal differences, SPSF reduces redundant and inconsistent responses inherent in direct feature concatenation.
+\item We develop the PFHM and ACRHM modules. PFHM leverages IoU-aware prototype supervision to align classification confidence with bounding-box precision, while ACRHM performs dynamic class-reliability calibration to replace static frequency reweighting. A unified dynamic harmonization mechanism coordinates both modules, achieving collaborative optimization of classification and regression.
+\end{itemize}
+
+\section{Related Work}
+\subsection{RGB--IR Object Detection}
+
+Visible and infrared modalities provide naturally complementary cues for object detection. Visible imagery preserves rich color and fine-grained texture information, but its quality is highly sensitive to illumination changes, shadows, haze, and adverse weather conditions. In contrast, infrared imagery provides relatively stable thermal and structural responses under low-light conditions, while lacking chromatic and detailed texture cues \cite{kaist,cft,cmaff,rgbt_fusion}. Owing to this complementarity, research on RGB--IR object detection has gradually evolved from simple multimodal feature combination toward more effective modeling of cross-modal discrepancies and discriminative representations. Existing methods can be broadly categorized into three stages: convolution-based fusion, attention-based calibration, and Transformer-based interaction.
+
+Early convolution-based fusion methods mainly combine dual-modal features through concatenation, element-wise operations, and convolutional compression \cite{halfway}. Such approaches are structurally simple, computationally efficient, and easy to integrate into existing detection frameworks. However, their fusion mechanisms are largely dominated by local receptive fields and predefined operations, which limits their ability to explicitly model high-level cross-modal semantic relationships. In addition, fusion is typically treated as a relatively independent representation-learning process, with limited explicit consideration of how the resulting fused features affect subsequent query matching.
+
+Attention-based fusion and feature calibration methods further improve multimodal interaction by adaptively selecting complementary responses across modalities. Representative approaches such as GAFF \cite{gaff}, CFT \cite{cft}, CMAFF \cite{cmaff}, and ICA Fusion \cite{icafusion} employ inter- or intra-modality attention, cross-modal attention, or iterative cross-attention mechanisms to establish semantic dependencies between visible and infrared features. Compared with fixed convolutional fusion, these methods enable more flexible information selection and suppress redundant cross-modal responses. Nevertheless, their optimization objectives remain primarily focused on feature-space interaction, while the relationship between fusion quality and downstream detection objectives, particularly Hungarian matching and joint classification--localization optimization in DETR-like detectors, remains insufficiently modeled.
+
+Transformer-based methods further extend cross-modal fusion from local feature interaction to global dependency modeling and query-level representation learning. Methods such as C$^2$Former \cite{c2former}, DAMSDet \cite{damsdet}, and GM-DETR \cite{gmdetr} employ Transformer-based interaction, deformable attention, or modality-aware fusion mechanisms to enhance cross-modal representation learning~\cite{wavemamba}, demonstrating improved performance in challenging scenes and small-object detection. However, although the capability of feature interaction has been substantially strengthened, fusion modules are still often designed as relatively independent structural components. The influence of fusion quality on query-matching stability and category-specific learning states therefore remains underexplored. This issue becomes more pronounced under long-tailed distributions, where tail classes receive substantially fewer positive queries and are consequently more sensitive to modality discrepancies, registration errors, and noisy fused representations.
+
+Overall, RGB--IR object detection has progressed from local convolutional fusion to attention-based calibration and Transformer-based global interaction. Despite this progress, an important coupling problem remains between how multimodal features are fused and how the resulting representations support downstream query matching. In the DETR paradigm, fused representations are directly fed into the encoder and decoder and therefore influence subsequent one-to-one Hungarian matching and supervision allocation \cite{detr,rtdetr}. Motivated by this observation, we introduce the shared--private symmetric fusion (SPSF) module, which explicitly models shared cross-modal semantics and modality-specific variations to reduce redundant and inconsistent responses in high-level fused representations, thereby providing a more stable feature basis for subsequent query matching, localization-quality harmonization, and class-reliability calibration.
+
+\subsection{Long-Tailed and Localization-Quality-Aware Object Detection}
+Long-tailed object detection is jointly challenged by severe class imbalance, sparse positive supervision, and inconsistent classification and localization quality. Head categories contribute substantially more training samples and gradient updates, causing detectors to favor frequent classes while underrepresenting rare ones \cite{lvis},\cite{bags},\cite{gaussian_logit}. This imbalance becomes more pronounced in DETR-like detectors because one-to-one Hungarian matching assigns each ground-truth instance to only one prediction in the set-prediction objective \cite{detr}. Consequently, tail categories accumulate substantially fewer positive queries during training, making their representations and supervision signals more sensitive to noise and localization errors. Existing approaches mainly address this problem from two perspectives: class re-balancing and localization-quality-aware learning.
+
+Class re-balancing methods alleviate long-tailed bias through resampling or loss reweighting. Class-Balanced Loss adjusts class-specific contributions according to the effective number of samples \cite{class_balanced_loss}, while Focal Loss reduces the influence of well-classified examples and emphasizes difficult samples \cite{focal_loss}. More recent methods further introduce adaptive optimization strategies. Seesaw Loss dynamically rebalances positive and negative gradients for individual categories \cite{seesaw}, whereas EQL v2 employs gradient-guided reweighting to alleviate the imbalance between positive and negative gradients \cite{eqlv2}. Although these approaches effectively mitigate head-class dominance, their weighting criteria mainly characterize category frequency, sample difficulty, or gradient statistics. They do not explicitly consider whether the matched samples of a category are reliably localized, nor how cross-modal degradation influences the quality of the sparse supervision received by tail classes. In DETR, where classification costs directly participate in Hungarian matching \cite{detr}, strengthening tail-class supervision without considering matching quality may therefore also amplify unreliable signals from poorly localized queries.
+
+Localization-quality-aware methods address another limitation: classification confidence does not necessarily reflect bounding-box accuracy. GFL \cite{gfl} integrates localization quality into the classification representation, while VarifocalNet \cite{varifocalnet} learns an IoU-aware classification score that jointly reflects object confidence and localization accuracy. These methods demonstrate the value of incorporating localization information into classification, but are primarily developed for dense detection paradigms with abundant candidate samples. Their assumptions therefore differ from the sparse query setting of DETR, where only a limited number of matched queries provide positive supervision. Prototype-based representation learning offers a complementary perspective by representing categories through class-specific prototypes in a learned embedding space \cite{protonet}. However, conventional prototype learning is generally formulated independently of bounding-box localization quality, while localization-quality-aware objectives usually do not explicitly model the evolving reliability of long-tailed categories.
+
+Overall, existing long-tailed learning and localization-quality-aware methods improve optimization from different perspectives, but class reliability and localization reliability are still largely modeled separately. This separation becomes particularly restrictive in long-tailed RGB--IR detection: tail classes already receive fewer positive queries, while modality discrepancies and localization errors further reduce the reliability of these scarce supervision signals. Motivated by this limitation, we introduce the Prototype-guided Fine-localization Harmonization (PFHM) module and the Annotation-guided Class-reliability Harmonization (ACRHM) module. PFHM incorporates localization quality into prototype-based query supervision to improve classification--localization consistency, whereas ACRHM combines annotation priors with online learning statistics to dynamically calibrate class-specific supervision. The two modules therefore address instance-level localization reliability and category-level learning reliability from complementary perspectives.
+
+\subsection{Query Supervision and Training Coordination in DETR}
+DETR reformulates object detection as a set-prediction problem and establishes one-to-one correspondence between predictions and ground-truth objects through Hungarian matching \cite{detr}. Although this design eliminates hand-crafted anchors and non-maximum suppression, it also results in sparse positive supervision and introduces matching uncertainty during training. Existing DETR variants therefore mainly improve optimization from two directions: stabilizing query matching and increasing supervision density.
+
+Matching-oriented methods aim to reduce assignment ambiguity and accelerate convergence~\cite{align_detr,salience_detr}. Deformable DETR improves feature sampling efficiency through multi-scale deformable attention \cite{deformable_detr}, while DN-DETR introduces query denoising to alleviate the instability of bipartite matching during early training \cite{dn_detr}. DINO further combines denoising training with improved query initialization and box refinement to strengthen DETR optimization \cite{dino}. These approaches substantially improve convergence and matching stability, but their primary objective is to obtain more reliable query--ground-truth assignments rather than explicitly evaluating how reliable each matched query is as a carrier of classification and localization supervision.
+
+Supervision-densification methods instead provide more positive learning signals beyond conventional one-to-one assignment~\cite{hdetr},\cite{group_detr}. Co-DETR introduces collaborative hybrid assignments and auxiliary one-to-many supervision to strengthen encoder and decoder learning \cite{codetr}. MS-DETR directly combines one-to-one and one-to-many supervision within the primary decoder to improve candidate generation \cite{msdetr}, while RT-DETRv3 further introduces hierarchical dense positive supervision to enrich end-to-end detector training \cite{rtdetrv3}~\cite{deim}. These strategies demonstrate that increasing supervision density can alleviate the scarcity of positive queries. Nevertheless, supervision quantity and supervision reliability are not equivalent. In long-tailed RGB--IR detection, cross-modal registration errors, degraded infrared textures, and the scarcity of tail-class instances can jointly perturb matched-query representations, causing classification confidence, localization quality, and category-level learning states to evolve inconsistently.
+
+Overall, existing DETR studies have substantially improved training through matching stabilization and supervision densification, but the dynamic reliability of different supervision signals remains insufficiently modeled. This issue is particularly important when multiple auxiliary objectives coexist: applying them with fixed intensities throughout training may introduce competing optimization signals when query matching or class estimates are still unstable. Consequently, long-tailed RGB--IR detection requires not only richer supervision, but also a mechanism that determines how strongly different reliability-aware objectives should participate at different training stages. To this end, we introduce a unified dynamic harmonization strategy that adaptively coordinates PFHM and ACRHM according to online training states, allowing localization-quality supervision and class-reliability calibration to contribute with dynamically regulated intensities while reducing potential interference with the primary detection objective.
+
+\section{Method}
+This section presents the overall architecture of RSC-DETR. Built upon a concat-merged RT-DETR backbone, the proposed framework integrates three complementary components. The shared--private symmetric fusion (SPSF) module models shared semantics and symmetric modality discrepancies in high-level cross-modal features. The prototype-guided fine-localization harmonization (PFHM) module refines the classification representations of matched queries by leveraging localization quality as a soft target. The annotation-guided class-reliability harmonization (ACRHM) module dynamically adjusts class-level supervision weights by exploiting annotation priors and online matching statistics. These modules address three failure modes that are particularly pronounced in aerial RGB--IR imagery: cross-sensor feature interference, the localization sensitivity of small targets, and unreliable supervision under category imbalance. They operate at distinct yet cooperative stages: SPSF yields the cross-modal representation fed into the encoder; PFHM enforces classification--localization consistency for matched queries; and ACRHM modulates the class-specific costs in both matching and loss computation. A unified dynamic scheduling strategy further regulates their training intensities to ensure stable convergence. The remainder of this section is organized as follows: Section~\ref{sec:framework} elaborates on the overall framework; Sections~\ref{sec:spsf}--\ref{sec:acrhm} detail the architectural design of the three modules; and Section~\ref{sec:harmonization} describes the dynamic harmonization mechanism coordinating PFHM and ACRHM during training.
+
+\subsection{Overall Framework}
+\label{sec:framework}
+Given a pair of registered visible image $I^{rgb}$ and infrared image $I^{ir}$, a dual-stream backbone extracts multi-scale features $\{F_3^{rgb},F_4^{rgb},F_5^{rgb}\}$ and $\{F_3^{ir},F_4^{ir},F_5^{ir}\}$. The low- and mid-level features $S_3$ and $S_4$ adopt a lightweight fusion scheme involving concatenation, $1\times1$ convolution compression, and $3\times3$ convolution refinement; the high-level features $S_5$ are fused by SPSF via symmetric compact modeling of shared semantics and modality discrepancies, as detailed in Section~\ref{sec:spsf}. The fused multi-scale features then feed into the RT-DETR encoder and decoder; during training, PFHM and ACRHM engage in query-representation refinement and class-supervision calibration, respectively, and the model finally outputs categories, bounding boxes, and confidence scores.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.80\textwidth,keepaspectratio]{figures/cmfc_detr_overall_framework.png}
+\caption{Overall framework of RSC-DETR. The framework first performs cross-modal feature fusion. During training, PFHM and ACRHM jointly coordinate classification, localization, and class-reliability supervision.The total loss optimizes all trainable parameters of the detection network through backpropagation }
+\label{fig:framework}
+\end{figure*}
+
+Fig.~\ref{fig:framework} illustrates the overall architecture of RSC-DETR. In the figure, $C_i^v$ and $C_i^r$ denote the backbone outputs of the visible and infrared branches at the $i$-th scale, corresponding to $F_i^{rgb}$ and $F_i^{ir}$ in our notation. The fused features from the three scales are fed into the hybrid encoder, decoder, and RT-DETR detection head to yield the final predictions; ``Matcher \& Criterion'' indicates the Hungarian matching and loss computation governed by the class cost. The dashed box in the lower-right corner represents the training-stage harmonization mechanism: the dynamic gate $g_p^t$ regulates the PFHM auxiliary loss and gradient scaling, while the ACRHM-derived class weights are injected into both the matching cost and the loss modulation. At inference, only the solid path is retained, corresponding to the main detection output and the post-processing pipeline.
+
+\subsection{Shared--Private Symmetric Fusion Module}
+\label{sec:spsf}
+To mitigate redundant and inconsistent high-level responses induced by direct fusion, we design the shared--private symmetric fusion (SPSF) module to explicitly model a shared semantic center and symmetric cross-modal discrepancies. The efficacy of shared--private decomposition is contingent upon the degree of semantic abstraction: high-level features encapsulate sufficient semantic information, rendering them amenable to estimating the cross-modal common center and symmetric differences. In contrast, shallow features are predominantly composed of spatial details such as edges and textures, where direct decomposition tends to amplify registration noise and perturb the fine-grained representations of dense small objects. Consequently, SPSF is exclusively applied to the highest-level feature map $S_5$. This scale-aware restriction constitutes a deliberate structural prior rather than an assertion of strict shared--private statistical independence, and its empirical validity is verified through module ablation studies.
+
+Let $C_5^v$ and $C_5^r$ denote the backbone outputs of the visible and infrared branches at the $S_5$ level, corresponding to $F_5^{rgb}$ and $F_5^{ir}$ in the notation of the overall framework. Let $\phi(\cdot)$ denote the input projection layer with shared weights across the two modalities, and let $\psi_c(\cdot)$ and $\psi_p(\cdot)$ denote the shared-semantic transform and the private-difference transform, respectively. SPSF first obtains the projected features as
+\begin{equation}
+P_v=\phi(C_5^v), \quad P_r=\phi(C_5^r),
+\end{equation}
+and computes the shared center
+\begin{equation}
+U=\frac{P_v+P_r}{2}.
+\end{equation}
+Here, $U$ denotes the average semantic center of the two modalities after the shared projection. The shared branch generates the common semantic features from $U$:
+\begin{equation}
+F_{com}=\psi_c(U).
+\end{equation}
+Here, $F_{com}$ denotes the cross-modal common features generated from the shared center. SPSF then computes the deviations of the two modalities from the shared center separately:
+\begin{equation}
+E_v=P_v-U,\quad E_r=P_r-U,
+\end{equation}
+and symmetrically encodes the two deviations through a shared private transform:
+\begin{equation}
+F_{pri}=\frac{\psi_p(E_v)+\psi_p(E_r)}{2}.
+\end{equation}
+Here, $F_{pri}$ denotes a symmetric modality-discrepancy representation. Since $E_r=-E_v$, this branch does not preserve modality identity explicitly; instead, the shared nonlinear transform $\psi_p(\cdot)$ captures the magnitude and nonlinear structure of the deviations around the common center, preventing their linear cancellation. The final output is
+\begin{equation}
+F_5^{out}=F_{com}+\alpha_s F_{pri}, \quad \alpha_s=0.5.
+\end{equation}
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.75\columnwidth]{figures/spsf_module_flow.png}
+\caption{SPSF: shared--private symmetric fusion module. This module generates high-level fused features at $S_5$ through a shared projection, a common-semantic branch, and a symmetric private branch.}
+\label{fig:spsf_flow}
+\end{figure}
+Here, $F_5^{out}$ denotes the fused $S_5$ feature output by SPSF, and $\alpha_s$ is a fixed scalar weighting the discrepancy branch, distinct from the dynamic harmonization coefficients employed in PFHM and ACRHM. We set $\alpha_s=0.5$ according to the module-level sensitivity analysis in Section~IV-F. In implementation, $\phi(\cdot)$ executes channel projection via a $1\times1$ convolution followed by normalization and SiLU activation. The shared branch comprises a depthwise-separable $3\times3$ convolution and a $1\times1$ output projection. The discrepancy branch first applies GELU activation to the deviation features, followed by a depthwise-separable convolution with shared weights and a subsequent output projection. SPSF exclusively substitutes the dual-modal fusion unit at the highest level $S_5$; $S_3$ and $S_4$ retain the baseline concat--$1\times1$--$3\times3$ fusion path to preclude excessive perturbation of fine-grained representations for densely distributed or small-scale aerial objects. The output channels of the fused features are kept consistent with the input specification of the original RT-DETR encoder, thereby necessitating no structural modifications to the subsequent hybrid encoder and decoder.
+
+\subsection{Prototype-Guided Fine-Localization Harmonization Module}
+\label{sec:pfhm}
+PFHM does not directly regress bounding boxes; instead, it distills the localization quality of matched queries into prototype-based classification supervision. It reuses the Hungarian matching assignments from the main detection branch, treating the IoU between the predicted boxes of matched queries and the corresponding ground-truth boxes as a stop-gradient soft target. Auxiliary classification supervision is then generated based on the similarity between query embeddings and class prototypes. Consequently, PFHM operates exclusively on the classification representations of matched queries, wherein localization quality is implicitly transferred via soft labels and sample weighting. This branch is engaged only during training and is entirely excluded from the inference pipeline, incurring no additional computational overhead for the detection output or post-processing.
+
+To mitigate the persistent misalignment between class discrimination and localization quality, particularly for long-tailed classes and hard examples, we propose the PFHM module. Starting from the query features $h_i$ of the final decoder layer, the module derives query representations via a lightweight mapping $g_f(\cdot)$ and instantiates a learnable prototype vector $p_c$ for each class $c$. Both the resulting query embeddings and the class prototypes are $\ell_2$-normalized as follows:
+\begin{equation}
+\hat{q}_i=\frac{g_f(h_i)}{\|g_f(h_i)\|_2},\quad
+\hat{p}_c=\frac{p_c}{\|p_c\|_2}.
+\end{equation}
+Here, $h_i$ denotes the feature of the $i$-th decoder query, and $\hat{q}_i$ and $\hat{p}_c$ represent the $\ell_2$-normalized query embedding and class prototype, respectively. Subsequently, the cosine similarity matrix between the query embeddings and the class prototypes is computed, upon which a learnable logit scale is applied to yield the PFHM auxiliary logits:
+\begin{equation}
+S=\hat{Q}\hat{P}^{T},\quad
+\tau=\exp(\log\tau),\quad
+Z=\tau S.
+\end{equation}
+Here, $S$ denotes the prototype cosine similarity matrix, $\tau$ is a learnable inverse-temperature scale, and $Z$ denotes the resulting auxiliary classification logits. During training, we reuse the positive sample set $\mathcal{M}$ established by Hungarian matching: the logits $Z_M$ corresponding to the matched queries are extracted, and the IoU between the predicted box $\hat{b}_i$ and the matched ground-truth box $b_j$ is adopted as the localization-quality-aware soft target:
+\begin{equation}
+q_i^{loc}=\operatorname{sg}\left(\operatorname{IoU}(\hat{b}_i,b_j)\right),
+\end{equation}
+\begin{equation}
+Y_{i,c}=
+\begin{cases}
+q_i^{loc}, & c=c_j,\\
+0, & \text{otherwise}.
+\end{cases}
+\end{equation}
+Here, $\operatorname{sg}(\cdot)$ denotes the stop-gradient operator, and $q_i^{loc}$ represents the localization quality of a matched positive sample. This quality transfer is especially important for small aerial objects, for which a modest pixel displacement may produce a substantial IoU decrease. To account for class imbalance and the evolving reliability of the prototype representation, PFHM maintains class-wise EMA states for classification difficulty $d_c$, probability-margin difficulty $m_c$, and matched IoU $u_c$. The internal class weight is
+\begin{equation}
+\bar{w}_c^{p}=\operatorname{Norm}_{1}\!\left(
+w_c^{freq}\tilde d_c^{0.45}\tilde m_c^{0.35}\tilde u_c^{0.20}
+\right),
+\end{equation}
+where $w_c^{freq}$ is the annotation-derived frequency prior, the tildes denote mean-normalized online states, and $\operatorname{Norm}_{1}$ performs bounded mean-one normalization. ACRHM additionally supplies a coordinated external class factor $w_c^{ext}$. For a retained matched query $i$ of class $c_i$, its effective weight is
+\begin{equation}
+\omega_i=\bar{w}_{c_i}^{p}w_{c_i}^{ext}
+\left(0.35+0.65q_i^{loc}\right)s_i^{area}k_i,
+\end{equation}
+where $s_i^{area}$ is the dataset-adaptive small-object scaling factor and $k_i\in\{0,1\}$ is the localization-quality selection mask. The latter retains a controlled fraction of matched queries according to the current IoU distribution, thereby preventing poorly localized samples from dominating prototype learning. The raw auxiliary objective is computed before the external participation gate as
+\begin{equation}
+\mathcal{L}_{pfhm}^{raw}=s_p
+\frac{\sum_{i\in\mathcal{M}}\omega_i
+\sum_c\operatorname{VFL}(Z_{i,c},Y_{i,c})}
+{\sum_{i\in\mathcal{M}}\omega_i+\epsilon},
+\end{equation}
+where $s_p$ controls the numerical scale and gradual release of prototype supervision. In implementation, the prototype table is a $C\times D$ matrix with $D=256$, initialized by Xavier uniform initialization; $\log\tau$ is initialized to $\log 8.0$ and optimized jointly. By reusing the main Hungarian assignments and detached box IoUs, PFHM requires neither an additional assigner nor an inference-time branch.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.75\columnwidth]{ph.png}
+\caption{PFHM: prototype-guided fine-localization harmonization module. The module derives normalized query representations from decoder queries and computes the cosine similarity with respect to normalized class prototypes. By integrating the matched-box IoU, class frequency priors, and the training-stage scaling factor, PFHM yields localization-aware auxiliary supervision, effectively aligning classification confidence with bounding-box precision.}
+\label{fig:pfhm_flow}
+\end{figure}
+
+\subsection{Annotation-Guided Class-Reliability Harmonization Module}
+\label{sec:acrhm}
+ACRHM combines an annotation-derived class prior with detached online matching states. The annotation prior provides a stable description of category scarcity, while the online states characterize how reliably each category is currently classified and localized. This design is well suited to aerial vehicle detection, where visually similar categories can have substantially different sample frequencies and learning dynamics. Rather than indiscriminately amplifying uncertain classes, ACRHM first estimates their compensation demand and then admits that compensation according to the reliability of the accumulated evidence.
+
+Let $n_c$ denote the number of training instances of class $c$ and $n_{\max}=\max_c n_c$. The annotation-derived scarcity and evidence terms are defined as
+\begin{equation}
+F_c=\frac{\log(n_{\max}+1)-\log(n_c+1)}{\log(n_{\max}+1)},
+\qquad
+E_c=1-\exp(-n_c/\tau_e),
+\end{equation}
+where $F_c\in[0,1]$ increases toward tail categories, $E_c\in[0,1]$ measures whether the annotation support for class $c$ is sufficient, and $\tau_e$ controls the saturation rate. ACRHM also computes a dataset-level density descriptor
+\begin{equation}
+N=\operatorname{clip}\left(
+\frac{N_{inst}/N_{img}}{N_0},0,1\right),
+\end{equation}
+where $N_{inst}/N_{img}$ is the mean number of annotated objects per training image and $N_0$ is a normalization constant. This descriptor controls the overall coordination policy and does not duplicate a class-wise object-size prior.
+
+During training, the matched queries provide four class-wise online states: normalized classification difficulty $D_c^t$, localization quality $Q_c^t$, assignment stability $M_c^t$, and confusion concentration $C_c^t$. The classification difficulty is obtained by min--max normalization across the observed classes, $Q_c^t$ is the mean matched IoU, $M_c^t=1-S_c^t$ is the complement of the assignment-switch rate relative to the unweighted matcher, and $C_c^t$ measures the concentration of competing-class predictions. Each state is updated with an EMA:
+\begin{equation}
+Z_c^t=\mu Z_c^{t-1}+(1-\mu)\hat Z_c^t,
+\quad Z\in\{D,Q,M,C\},
+\end{equation}
+where $\mu=0.97$ for the coordination states. If class $c$ is absent from the current mini-batch, its preceding state is retained. This class-conditional update is important for remote-sensing tail categories, which may be missing from many consecutive mini-batches.
+
+The compensation demand and online reliability are then defined as
+\begin{equation}
+H_c^t=\operatorname{clip}\left(
+0.42F_c+0.38D_c^t+0.12C_c^t+0.08(1-N),0,1
+\right),
+\end{equation}
+\begin{equation}
+R_c^t=\operatorname{clip}\left(Q_c^tM_c^tE_c,0,1\right).
+\end{equation}
+Here, $H_c^t$ represents the need for additional class supervision, whereas $R_c^t$ acts as a safety factor that prevents unstable online estimates from receiving unrestricted compensation. The available class-wise budget is
+\begin{equation}
+B_c^t=\operatorname{clip}\left(b_{\max}H_c^tR_c^t,0,b_{\max}\right).
+\end{equation}
+To coordinate ACRHM with the prototype branch, the budget is divided according to prototype reliability $R_{c,p}^t$:
+\begin{equation}
+\beta_c^t=\operatorname{clip}\left(
+\frac{R_{c,p}^t}{R_{c,p}^t+D_c^t+\epsilon},
+\beta_{\min},\beta_{\max}\right),
+\end{equation}
+\begin{equation}
+B_{c,p}^t=\beta_c^tB_c^t,\qquad
+B_{c,a}^t=(1-\beta_c^t)B_c^t.
+\end{equation}
+The prototype-side and main-detection class weights are obtained by bounded mean-one normalization:
+\begin{equation}
+w_{c}^{p}=\operatorname{Norm}_{1,[w_{\min},w_{\max}]}(1+B_{c,p}^t),\quad
+w_{c}^{a}=\operatorname{Norm}_{1,[w_{\min},w_{\max}]}(1+B_{c,a}^t),
+\end{equation}
+where
+\begin{equation}
+\operatorname{Norm}_{1,[l,u]}(z_c)
+=\operatorname{clip}(s z_c,l,u),\quad
+\frac{1}{C}\sum_{c=1}^{C}\operatorname{clip}(s z_c,l,u)=1.
+\end{equation}
+This normalization preserves the average supervision scale while allowing relative emphasis to move between head and tail categories.
+
+The effective positive-class weight used by the main classification loss is a residual modulation around one,
+\begin{equation}
+w_c^{cls}=1+g_{cls}^t(w_c^{a}-1),
+\end{equation}
+where $g_{cls}^t$ is the state-dependent classification gate. The matcher uses a more conservative residual range:
+\begin{equation}
+w_c^{mat}=\operatorname{Norm}_{1,[0.90,1.10]}
+\left(1+\mu_m^t(w_c^{a}-1)\right).
+\end{equation}
+Because the two branches share $w_c^a$ but use different residual strengths and bounds, their weights remain coordinated while retaining limited branch-specific adaptation. In Hungarian matching, only the class-cost column is reweighted, while the L1 and GIoU geometric costs remain unchanged:
+\begin{equation}
+\begin{aligned}
+\mathcal{C}_{ij}^{acrhm}={}&w_{c_j}^{mat}\mathcal{C}_{cls}(i,j)
++\lambda_{L1}\|\hat{b}_i-b_j\|_1 \\
+&+\lambda_{giou}\mathcal{C}_{giou}(i,j).
+\end{aligned}
+\end{equation}
+Unlike PFHM, ACRHM does not introduce an independent detection head but modulates the training objective of the main detector:
+\begin{equation}
+\mathcal{L}_{det}^{acrhm}=\sum_{(i,j)\in\mathcal{M}}\left[
+w_{c_j}^{cls}\mathcal{L}_{cls}(i,j)+\eta_c w_{c_j}^{loc}\mathcal{L}_{box}(i,j)
+\right].
+\end{equation}
+Here, $w_{c_j}^{loc}$ is a weak, reliability-bounded localization factor and $\eta_c$ limits its influence on box regression. The preceding equation highlights the terms modulated by ACRHM; all remaining classification and auxiliary objectives follow the original RT-DETR formulation without modification. The online states are computed only from training predictions and assignments, including the true-versus-competing-class probability margin, matched IoU, confusion concentration, and assignment-switch rate. Thus, ACRHM reshapes class-specific supervision without altering the inference architecture.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.80\columnwidth]{figures/acrhm_module_flow.png}
+\caption{ACRHM: annotation-guided class-reliability harmonization module. This module derives class priors from training annotations and estimates class-specific errors and correction terms from online matching states. The resulting fused reliability weights are subsequently injected into the Hungarian matching cost, the positive-sample classification loss, and the weak localization loss adjustment.}
+\label{fig:acrhm_flow}
+\end{figure}
+
+\subsection{Training Harmonization of PFHM and ACRHM}
+\label{sec:harmonization}
+The dynamic harmonizer is not a fixed loss weighting. It jointly produces the ACRHM residual gates and regulates the loss and gradient contributions of PFHM from detached training states. In the early stage, the prototype branch is gradually released by a progress schedule; thereafter, its participation depends on whether sufficient classes have accumulated reliable positive-query representations. This avoids imposing strong prototype supervision before small or tail categories have formed meaningful class representations.
+
+For class $c$, prototype reliability is estimated from cumulative positive coverage $V_c^t$, matched localization quality $Q_c^t$, and the probability-margin reliability $A_c^t$:
+\begin{equation}
+P_c^t=\operatorname{clip}(V_c^tQ_c^tA_c^t,0,1).
+\end{equation}
+Its smoothed state is conservatively combined with the current observation, and the mean prototype maturity is
+\begin{equation}
+\bar P^t=\frac{1}{C}\sum_{c=1}^{C}
+\max(P_{c,\mathrm{EMA}}^t,P_c^t).
+\end{equation}
+The PFHM participation gate is then
+\begin{equation}
+g_p^t=g_{\mathrm{cap}}
+\operatorname{clip}\left(
+\frac{\bar P^t-P_{\min}}{P_{\mathrm{ready}}-P_{\min}},0,1
+\right),
+\end{equation}
+where $g_{\mathrm{cap}}$ is an annotation-conditioned upper bound. In parallel, a bounded gradient gate $g_{\nabla}^t$ scales the PFHM gradient passed to the shared decoder queries, while leaving the forward logits unchanged:
+\begin{equation}
+Z^{grad}=\operatorname{sg}(Z)+g_{\nabla}^t
+\left(Z-\operatorname{sg}(Z)\right).
+\end{equation}
+This separation enables the auxiliary objective to provide informative supervision without dominating the main detection representation. The final training objective is
+\begin{equation}
+\mathcal{L}=\mathcal{L}_{det}^{acrhm}+g_p^t\mathcal{L}_{pfhm}^{raw}.
+\end{equation}
+Here, $\mathcal{L}$ denotes the final training objective. ACRHM acts through the matching, classification, and weak localization factors in $\mathcal{L}_{det}^{acrhm}$, whereas $g_p^t$ regulates the participation of the prototype-based auxiliary objective. After SPSF produces the fused multi-scale representation, Hungarian matching is performed with the ACRHM-modulated class cost; the resulting positive assignments update the detached online states, after which the main detection objective and gated PFHM loss are evaluated. All harmonization components are training-only, and inference retains the original RT-DETR detection path.
+
+\section{Experimental Setup and Results}
+
+\subsection{Datasets}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\columnwidth]{download.png}
+    \caption{Class distributions of the VEDAI fold 1 and M3FD-LT20 training sets. Blue and red bars denote the head and tail classes, respectively.}
+    \label{fig:class_distribution}
+\end{figure}
+
+Experiments are conducted on three RGB--IR object detection
+benchmarks: VEDAI, M3FD-LT20, and DVTOD. VEDAI and M3FD-LT20
+are used to evaluate long-tailed detection performance,
+while VEDAI and DVTOD assess effectiveness in aerial remote
+sensing scenarios. M3FD-LT20 further extends the evaluation
+to ground-level road scenes to examine the method's
+applicability across scenarios.
+
+\setcounter{table}{0}
+\begin{table*}[!t]
+\centering
+\caption{Overall accuracy and per-class AP comparison on VEDAI. Bold values indicate the best result in each column.}
+\label{tab:vedai compare}
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+\renewcommand{\arraystretch}{1.05}
+\setlength{\heavyrulewidth}{0.8pt}
+\setlength{\lightrulewidth}{0.5pt}
+\setlength{\cmidrulewidth}{0.3pt}
+\begin{tabular*}{0.85\textwidth}{@{\extracolsep{\fill}}l*{12}{c}@{}}
+\specialrule{0.8pt}{\abovetopsep}{\belowrulesep}
+Method & Input & Car & Truck & Pickup & Tractor & Camp.car
+& Boat & Van & Other & AP$_{50}$ & AP$_{75}$ & AP \\
+\specialrule{0.5pt}{\aboverulesep}{\belowrulesep}
+CFT\cite{cft}
+& RGB+IR & 57.28 & 45.78 & 52.65 & 53.55
+& 58.80 & 37.95 & 50.64 & 27.50
+& 77.93 & 53.83 & 48.02 \\
+
+RT-DETR\cite{rtdetr}
+& RGB & 59.67 & 60.61 & 62.25 & 51.98
+& \textbf{70.97} & 52.32 & 58.69 & 33.43
+& 85.23 & 65.29 & 56.24 \\
+
+C2DFF-Net\cite{c2dffnet}
+& RGB+IR & 57.75 & 44.13 & 54.44 & 40.65
+& 53.16 & 33.19 & 55.12 & 25.05
+& 72.57 & 54.47 & 45.43 \\
+
+RSVDet\cite{rsvdet}
+& RGB+IR & 56.16 & 46.11 & 52.08 & 42.26
+& 52.16 & 42.38 & 48.37 & 35.13
+& 72.85 & 56.43 & 46.83 \\
+
+YOLOv11-RGBT\cite{yolov11_rgbt}
+& RGB+IR & 56.91 & 52.64 & 56.56 & 42.31
+& 51.52 & 34.79 & 57.04 & 34.02
+& 75.46 & 56.17 & 48.22 \\
+
+LCAFNet\cite{lcafnet}
+& RGB+IR & 56.73 & 51.02 & 59.20 & 47.01
+& 55.21 & 44.01 & 55.11 & 27.66
+& 78.27 & 56.13 & 49.49 \\
+
+RT-DETR concat
+& RGB+IR & 61.72 & 60.21 & 60.62 & 52.86
+& 64.35 & 56.50 & \textbf{65.85} & 38.14
+& 87.15 & 66.89 & 57.53 \\
+
+Ours
+& RGB+IR & \textbf{62.99} & \textbf{63.28}
+& \textbf{62.75} & \textbf{58.36}
+& 67.89 & \textbf{57.94} & 62.47 & \textbf{38.80}
+& \textbf{88.53} & \textbf{71.47} & \textbf{59.31} \\
+\specialrule{0.8pt}{\aboverulesep}{\belowbottomsep}
+\end{tabular*}
+\vspace{-6pt}
+\end{table*}
+
+\setcounter{table}{1}
+\begin{table}[!t]
+\centering
+\caption{Scale-grouped and tail-grouped comparison on VEDAI. Bold values indicate the best result in each column.}
+\label{tab:vedai_accuracy}
+\scriptsize
+\setlength{\tabcolsep}{1pt}
+\renewcommand{\arraystretch}{1.05}
+\setlength{\heavyrulewidth}{0.8pt}
+\setlength{\lightrulewidth}{0.5pt}
+\setlength{\cmidrulewidth}{0.3pt}
+\begin{tabular*}{\columnwidth}{@{\extracolsep{\fill}}lc*{7}{c}@{}}
+\specialrule{0.8pt}{\abovetopsep}{\belowrulesep}
+Method & Year & AP-s & AP-m & AP-l & AP-h & AP-t & AR-h & AR-t \\
+\specialrule{0.5pt}{\aboverulesep}{\belowrulesep}
+CFT~\cite{cft}
+& 2022 & 45.23 & 50.02 & 37.21 & 54.96 & 45.70 & 68.25 & 63.24 \\
+
+RT-DETR~\cite{rtdetr}
+& 2024 & \textbf{53.53} & 59.69 & 82.67 & 60.96 & 54.67 & 73.42 & 72.06 \\
+
+C2DFF-Net~\cite{c2dffnet}
+& 2025 & 36.06 & 48.07 & 40.85 & 56.10 & 41.88 & 70.77 & 61.67 \\
+
+RSVDet~\cite{rsvdet}
+& 2025 & 43.74 & 50.37 & 14.47 & 54.12 & 44.40 & 64.78 & 57.78 \\
+
+YOLOv11-RGBT~\cite{yolov11_rgbt}
+& 2025 & 45.41 & 50.86 & 43.29 & 56.73 & 45.39 & 69.90 & 64.58 \\
+
+LCAFNet~\cite{lcafnet}
+& 2026 & 43.52 & 52.52 & 63.84 & 57.96 & 46.67 & 68.76 & 62.67 \\
+
+RT-DETR concat
+& -- & 51.15 & 59.61 & \textbf{95.05} & 61.17 & 56.32 & 74.40 & 74.59 \\
+
+Ours
+& -- & 51.28 & \textbf{62.11} & 89.20 & \textbf{62.87} & \textbf{58.12}
+& \textbf{74.67} & \textbf{74.70} \\
+\specialrule{0.8pt}{\aboverulesep}{\belowbottomsep}
+\end{tabular*}
+\vspace{-6pt}
+\end{table}
+
+{VEDAI}~\cite{vedai} is an aerial remote sensing vehicle detection dataset
+featuring small-scale vehicle targets, varied orientations,
+and an imbalanced class distribution in top-down imagery.
+It is used to evaluate the proposed method for long-tailed
+vehicle detection in aerial remote sensing scenarios.
+The input images retain the original resolution of
+$1024\times1024$ pixels. Due to computational resource
+constraints, only the official \textit{fold1} partition is
+used, and no multi-fold averaged results are reported.
+\textit{fold1} contains 1089 training images and 121 held-out
+images. In our experimental protocol, the held-out partition
+is used for both model selection and final evaluation:
+the best model is selected according to validation mAP,
+and its performance is reported on the same partition.
+The dataset comprises eight classes, which are divided
+into head and tail groups using a cumulative training-instance
+frequency threshold of $\tau=0.6$, as shown in
+Fig.~\ref{fig:class_distribution}(a).
+
+{M3FD-LT20}~\cite{tardal_m3fd} is a long-tailed RGB--IR detection benchmark
+constructed from the original M3FD road-scene images,
+extending the aerial remote sensing evaluation to
+ground-level road scenarios. LT20 denotes a target
+training-set imbalance factor (IF) of approximately 20,
+defined as the ratio between the instance counts of the
+most and least frequent classes. Long-tail sampling is
+applied only to the training set; the validation and test
+sets are not resampled. Images have a resolution of
+$1024\times768$ pixels. The final training, validation,
+and test sets contain 1428, 420, and 419 image pairs,
+respectively. The training set contains 16,406 instances
+across six classes, with 8379 Car instances and 407
+Motorcycle instances, yielding an actual IF of 20.59.
+The best model is selected according to validation AP
+and evaluated on the independent test set.
+The cumulative training-instance frequency threshold
+$\tau=0.6$ is used only for head--tail performance
+grouping, rather than long-tail dataset construction.
+The training-set class distribution is shown in
+Fig.~\ref{fig:class_distribution}(b).
+
+{DVTOD}~\cite{dvtod} is a UAV-based visible--thermal aerial remote sensing
+object detection dataset covering three categories of ground
+objects: Person, Car, and Bicycle. It is used to further
+evaluate the proposed method on UAV remote sensing imagery.
+The original RGB images have a resolution of
+$1920\times1080$ pixels, and the infrared images are resized
+to the same dimensions. The actual model input size is
+$1088\times1920$ pixels (height $\times$ width).
+All images and annotations are retained, following the
+existing split of 1606 training and 573 validation image
+pairs. The best model is selected according to validation
+AP$_{50:95}$, and final results are reported on the same
+validation set, without an independent test set.
+No head--tail class partitioning is applied to DVTOD.
+
+\subsection{Implementation Details}
+The experiments are conducted in PyTorch on an NVIDIA
+RTX 4090 GPU with 24 GB of memory. On all three datasets,
+RSC-DETR employs a dual-stream PResNet-50vd backbone to
+encode visible and infrared images separately. The RT-DETR
+detector uses six decoder layers, a hidden dimension of
+256, and 300 object queries, with 100 denoising queries
+during training. AdamW is used with learning rates of
+$1\times10^{-4}$ for the detection head and
+$1\times10^{-5}$ for the backbone, and a weight decay
+of $1\times10^{-4}$. VEDAI is trained for 30 epochs with
+a batch size of 4 and learning-rate decay at epoch 27.
+M3FD-LT20 is trained for 45 epochs with a batch size of 8
+and learning-rate decay at epoch 36. AMP is enabled for
+both datasets. DVTOD is trained for 15 epochs with a batch
+size of 2 and AMP disabled. Linear warm-up is applied
+for the first 166 iterations, followed by a MultiStepLR
+schedule that reduces the learning rate by a factor of
+0.1 at epoch 13.
+
+Detection performance is evaluated using the COCO evaluation
+protocol. Overall AP and per-class AP are averaged over IoU
+thresholds from 0.50 to 0.95 in steps of 0.05, while AP$_{50}$
+and AP$_{75}$ are computed at IoU thresholds of 0.50 and 0.75,
+respectively. Scale-specific performance is reported as
+AP-s, AP-m, and AP-l for small (area $<32^2$ pixels),
+medium ($32^2 \leq \mathrm{area}<96^2$ pixels), and large
+(area $\geq96^2$ pixels) objects, respectively.
+For VEDAI and M3FD-LT20, head and tail classes are defined
+using a cumulative training-instance frequency threshold
+of $\tau=0.6$. Group-wise AP and average recall (AR),
+averaged over the same IoU thresholds, are reported as
+AP-h, AP-t, AR-h, and AR-t. DVTOD is evaluated using
+overall, per-class, and scale-specific AP without
+head--tail grouping.
+
+\subsection{Comparison Results and Analysis on VEDAI}
+All comparison and ablation experiments on the VEDAI dataset are conducted on the official \textit{fold1} partition with random seed s3407. All methods are evaluated on the same test set to ensure fair comparison.
+
+Table~\ref{tab:vedai_accuracy} further reveals the behavior of RSC-DETR across object scales and long-tail groups. The method improves medium-scale detection and produces more balanced performance between head and tail categories. In particular, the improvement for tail categories is more evident than that for head categories, suggesting that the proposed harmonization mechanism redistributes supervision toward underrepresented classes without degrading the recognition of frequent classes. Although the concat baseline remains stronger on the large-object metric, RSC-DETR achieves better overall and strict-IoU performance with lower model complexity. This result indicates that directly concatenating dual-modal features may preserve abundant responses for large objects but also retain redundant or inconsistent information. In contrast, SPSF learns a more compact cross-modal representation, while PFHM and ACRHM improve the reliability of localization and class-specific supervision. The grouped results therefore demonstrate that the performance gain of RSC-DETR arises from coordinated representation learning and supervision calibration rather than from uniformly increasing feature capacity.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.80\textwidth]{8fc99659bf2ec8958aa823bc04f06387.jpg}
+\caption{Qualitative detection comparison on VEDAI scene 00001033. For each method the visible (RGB) and infrared (IR) views of the same scene are shown side by side, zoomed in on the scene's three ground-truth targets. Red boxes denote detections; the yellow box marks the tractor target for which RSC-DETR is the only method to output a high-confidence detection.}
+\label{fig:qualitative_vedai}
+\end{figure*}
+
+\subsection{Comparison Results and Analysis on M3FD-LT20}
+The comparison experiments on M3FD-LT20 use the validation
+set for model selection and the independent test set for
+final performance reporting.
+
+Table~\ref{tab:m3fd_comparison} summarizes the overall,
+per-class, scale-specific, and head--tail-grouped results
+on M3FD-LT20. RSC-DETR achieves the highest overall AP of
+55.90 and performs particularly well on Car, People, and
+Motorcycle, while maintaining competitive performance on
+the remaining categories. The improvement on Motorcycle
+is especially relevant to long-tailed detection because
+this category contains relatively few training instances.
+Compared with RT-DETR concat, the gain is greater at
+AP$_{75}$ than at AP$_{50}$, indicating improved detection
+performance under a stricter localization criterion.
+Together, these results are consistent with the intended
+complementarity of localization-quality supervision and
+class-reliability calibration.
+
+The scale- and head--tail-grouped results in the same
+table further characterize the behavior of RSC-DETR.
+The method performs well on medium and large objects,
+achieving the highest large-object AP of 83.12.
+Both head- and tail-category AP improve over RT-DETR
+concat, with a slightly larger gain for tail categories.
+The improvement in tail-category recall also indicates
+better recovery of ground-truth instances in these
+underrepresented classes. However, small-object AP
+remains below that of the concat baseline and the
+best-performing comparison method, suggesting that the
+proposed harmonization mechanisms do not fully address
+the limited spatial detail of small targets.
+Overall, RSC-DETR improves aggregate accuracy,
+strict-IoU localization, and head--tail-grouped
+performance on M3FD-LT20, while small-object detection
+remains a direction for further improvement.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.90\textwidth]{figures/qualitative_m3fd_rgb_ir_2x4.png}
+\caption{Qualitative detection comparison on M3FD-LT20 scene 00400. For each method the complete visible (RGB) and infrared (IR) views of the same $1024\times768$ scene are shown side by side. Red boxes denote correct detections, blue boxes denote false detections, and yellow boxes denote true positives detected only by RSC-DETR. Each displayed label gives the predicted category and confidence, with label colors matched to the corresponding detection boxes.}
+\label{fig:qualitative_m3fd}
+\end{figure*}
+
+
+\setcounter{table}{2}
+\begin{table*}[!t]
+\centering
+\caption{Overall accuracy, per-class AP, scale-grouped, and head--tail-grouped results on M3FD-LT20. Bold values indicate the best result in each metric column.}
+\label{tab:m3fd_comparison}
+\scriptsize
+\setlength{\tabcolsep}{1pt}
+\renewcommand{\arraystretch}{1.05}
+\setlength{\heavyrulewidth}{0.8pt}
+\setlength{\lightrulewidth}{0.5pt}
+\setlength{\cmidrulewidth}{0.3pt}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l*{18}{c}@{}}
+\specialrule{0.8pt}{\abovetopsep}{\belowrulesep}
+Method & Input & Year
+& Car & People & Lamp & Truck & Bus & Motor.
+& AP$_{50}$ & AP$_{75}$ & AP
+& AP-s & AP-m & AP-l
+& AP-h & AP-t & AR-h & AR-t \\
+\specialrule{0.5pt}{\aboverulesep}{\belowrulesep}
+CFT~\cite{cft}
+& RGB+IR & 2021
+& 59.17 & 37.09 & 48.40 & 49.87 & 62.77 & 46.82
+& 83.20 & 51.60 & 50.69
+& 33.95 & 56.02 & 56.59
+& 48.13 & 51.96 & 54.55 & 59.94 \\
+RT-DETR~\cite{rtdetr}
+& RGB & 2024
+& 62.73 & 34.56 & 47.02 & 50.97 & 68.50 & 45.69
+& 79.90 & 54.49 & 51.58
+& 33.77 & 54.76 & 81.79
+& 48.64 & 53.05 & 58.69 & 65.40 \\
+C2DFF-Net~\cite{c2dffnet}
+& RGB+IR & 2025
+& 60.30 & 37.54 & 41.68 & 49.19 & 60.27 & 46.14
+& 76.87 & 51.20 & 49.19
+& 27.50 & 56.78 & 67.89
+& 48.92 & 49.32 & 57.42 & 59.60 \\
+YOLOv11-RGBT~\cite{yolov11_rgbt}
+& RGB+IR & 2025
+& 59.18 & 37.14 & 43.36 & 45.85 & 62.81 & 47.42
+& 78.77 & 52.18 & 49.29
+& 31.03 & 55.27 & 63.32
+& 48.16 & 49.86 & 56.32 & 60.23 \\
+LCAFNet~\cite{lcafnet}
+& RGB+IR & 2026
+& 60.78 & 42.43 & \textbf{50.66} & 51.38 & 59.92 & 48.27
+& \textbf{84.79} & 55.13 & 52.24
+& \textbf{37.63} & 56.97 & 60.02
+& 51.61 & 52.56 & 57.94 & 60.20 \\
+CLDyN+RT-DETR~\cite{cldyn}
+& Fused image & 2026
+& 65.04 & 45.89 & 43.51 & 55.99 & \textbf{69.59} & 45.26
+& 82.53 & 57.54 & 54.21
+& 29.67 & \textbf{61.58} & 75.66
+& 55.46 & 53.59 & 64.57 & 65.02 \\
+RT-DETR concat
+& RGB+IR & --
+& 64.71 & 46.60 & 45.66 & \textbf{57.71} & 68.02 & 47.44
+& 82.84 & 58.77 & 55.02
+& 34.74 & 59.55 & 73.53
+& 55.66 & 54.71 & 65.09 & 67.52 \\
+Ours
+& RGB+IR & --
+& \textbf{65.48} & \textbf{47.44} & 47.09 & 57.30
+& 68.30 & \textbf{49.77}
+& 84.09 & \textbf{60.51} & \textbf{55.90}
+& 33.53 & 61.39 & \textbf{83.12}
+& \textbf{56.46} & \textbf{55.62}
+& \textbf{65.49} & \textbf{68.47} \\
+\specialrule{0.8pt}{\aboverulesep}{\belowbottomsep}
+\end{tabular*}
+\vspace{-6pt}
+\end{table*}
+
+\begin{table*}[t]
+\centering
+\caption{Overall accuracy, per-class AP, and model complexity comparison on DVTOD. Bold values indicate the best result in each column.}
+\label{tab:dvtod_comparison}
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+\renewcommand{\arraystretch}{1.05}
+\setlength{\heavyrulewidth}{0.8pt}
+\setlength{\lightrulewidth}{0.5pt}
+\setlength{\cmidrulewidth}{0.3pt}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l*{14}{c}@{}}
+\specialrule{0.8pt}{\abovetopsep}{\belowrulesep}
+Method & Input & Venue & Year
+& Person & Car & Bicycle
+& AP-s & AP-m & AP-l
+& AP$_{50}$ & AP$_{75}$ & AP
+& Params (M) & GFLOPs \\
+\specialrule{0.5pt}{\aboverulesep}{\belowrulesep}
+RT-DETR concat~\cite{rtdetr}
+& RGB+IR & CVPR & 2024
+& \textbf{57.54} & 57.76 & \textbf{53.49}
+& 23.49 & 31.94 & 60.01
+& 89.42 & \textbf{61.34} & 56.26
+& 126.78 & 1609.5 \\
+C$^{2}$Former~\cite{c2former}
+& RGB+IR & TGRS & 2024
+& 56.34 & 56.56 & 50.14
+& \textbf{24.57} & 31.11 & 58.21
+& 87.58 & 58.81 & 54.35
+& 124.05 & 1768.9 \\
+RT-DETR~\cite{rtdetr}
+& IR & CVPR & 2024
+& 52.85 & 54.08 & 52.32
+& 24.09 & \textbf{35.80} & 55.64
+& 83.94 & 57.80 & 53.09
+& 42.73 & 1357.7 \\
+SFFR~\cite{sffr}
+& RGB+IR & TGRS & 2025
+& 53.40 & 49.87 & 46.62
+& 19.32 & 35.07 & 53.27
+& 86.47 & 50.82 & 49.96
+& 167.14 & 1678.2 \\
+C2DFF-Net~\cite{c2dffnet}
+& RGB+IR & TGRS & 2025
+& 48.83 & 44.65 & 46.43
+& 19.59 & 34.53 & 49.16
+& 81.82 & 44.72 & 46.64
+& 6.58 & 126.7 \\
+DARFNet~\cite{darfnet}
+& RGB+IR & JSTARS & 2025
+& 46.79 & 40.49 & 38.81
+& 13.89 & 26.47 & 45.06
+& 76.99 & 39.63 & 42.03
+& 14.37 & 341.6 \\
+CMFADet~\cite{cmfadet}
+& RGB+IR & TGRS & 2026
+& 50.23 & 43.42 & 45.01
+& 15.09 & 26.14 & 49.42
+& 79.56 & 49.93 & 46.22
+& \textbf{3.60} & \textbf{109.9} \\
+Ours
+& RGB+IR & -- & --
+& 56.84 & \textbf{61.02} & 52.13
+& 23.51 & 31.30 & \textbf{60.44}
+& \textbf{89.49} & 61.21 & \textbf{56.66}
+& 90.10 & 1485.5 \\
+\specialrule{0.8pt}{\aboverulesep}{\belowbottomsep}
+\end{tabular*}
+\vspace{-6pt}
+\end{table*}
+
+\setcounter{table}{4}
+\begin{table*}[!t]
+\centering
+\caption{Ablation study on VEDAI. Bold numbers denote the best results.}
+\label{tab:vedai_ablation}
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+\renewcommand{\arraystretch}{1.05}
+\setlength{\heavyrulewidth}{0.8pt}
+\setlength{\lightrulewidth}{0.5pt}
+\setlength{\cmidrulewidth}{0.3pt}
+\begin{tabular*}{0.85\textwidth}{@{\extracolsep{\fill}}lcccc|ccccccc@{}}
+\specialrule{0.8pt}{\abovetopsep}{\belowrulesep}
+Input & PFHM & ACRHM & SPSF & Dynamic
+& AP$_{50}$ & AP$_{75}$ & AP & Params (M) & GFLOPs & Latency (ms) \\
+\specialrule{0.5pt}{\aboverulesep}{\belowrulesep}
+IR
+& & & & & 79.99 & 60.05 & 51.69 & 42.5 & 345.7 & 23.8 \\
+
+RGB
+& & & & & 85.23 & 65.29 & 56.24 & 42.5 & 345.7 & 24.7 \\
+
+RGB+IR
+& & & & & 87.15 & 66.89 & 57.53 & 126.3 & 810 & 37.5 \\
+
+RGB+IR
+& \checkmark & & & & 87.88 & 68.14 & 58.09 & 126.3 & 810 & 37.5 \\
+
+RGB+IR
+& & \checkmark & & & 87.24 & 68.46 & 57.83 & 126.3 & 810 & 37.5 \\
+
+RGB+IR
+& & & \checkmark & & 86.90 & 68.27 & 57.22 & 89.6 & 748 & 35.7 \\
+
+RGB+IR
+& \checkmark & \checkmark & & & 88.37 & 70.20 & 58.55 & 126.3 & 810 & 37.5 \\
+
+RGB+IR
+& & \checkmark & \checkmark & & 86.36 & 63.26 & 55.94 & 89.6 & 748 & 35.7 \\
+
+RGB+IR
+& \checkmark & & \checkmark & & 86.76 & 68.82 & 56.73 & 89.6 & 748 & 35.7 \\
+
+RGB+IR
+& \checkmark & \checkmark & \checkmark & & 85.97 & 66.69 & 57.12 & 89.6 & 748 & 35.7 \\
+
+RGB+IR
+& \checkmark & \checkmark & \checkmark & \checkmark
+& \textbf{88.53} & \textbf{71.47} & \textbf{59.31} & 89.6 & 748 & 35.7 \\
+\specialrule{0.8pt}{\aboverulesep}{\belowbottomsep}
+\end{tabular*}
+\vspace{-6pt}
+\end{table*}
+
+
+\begin{table}[!t]
+\centering
+\caption{Module-level sensitivity analysis of the SPSF discrepancy weight $\alpha_s$ on VEDAI using the SPSF-only configuration. Bold values indicate the best result in each column.}
+\label{tab:spsf_alpha_sensitivity}
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+\renewcommand{\arraystretch}{1.05}
+\setlength{\heavyrulewidth}{0.8pt}
+\setlength{\lightrulewidth}{0.5pt}
+\setlength{\cmidrulewidth}{0.3pt}
+\begin{tabular*}{\columnwidth}{@{\extracolsep{\fill}}lccc@{}}
+\specialrule{0.8pt}{\abovetopsep}{\belowrulesep}
+Private weight $\alpha$ & AP$_{50}$ & AP$_{75}$ & AP \\
+\specialrule{0.5pt}{\aboverulesep}{\belowrulesep}
+0.25 & \textbf{87.31} & 68.11 & \textbf{57.40} \\
+0.50 & 86.90 & 68.26 & 57.22 \\
+0.75 & 85.10 & \textbf{71.13} & 56.14 \\
+\specialrule{0.8pt}{\aboverulesep}{\belowbottomsep}
+\end{tabular*}
+\end{table}
+
+\subsection{Comparison Results and Analysis on DVTOD}
+
+The comparison experiments on DVTOD use the existing
+training and validation partitions. The best model is
+selected according to validation AP. All compared methods
+are evaluated on the same validation set of 573 image
+pairs using the same detection metrics.
+
+Table~\ref{tab:dvtod_comparison} presents the overall and
+per-class results on DVTOD. RSC-DETR achieves the highest
+overall AP among the compared methods, reaching 56.66.
+The improvement over RT-DETR concat is particularly evident
+for Car, whereas the performance on Person and Bicycle
+remains below that of the concat baseline. This result
+indicates that the overall gain is mainly associated with
+improved vehicle detection rather than uniform improvements
+across all categories.
+
+The scale-specific results further reveal the behavior of
+RSC-DETR in UAV remote sensing imagery. The method achieves
+the highest large-object AP, while its small-object
+performance remains close to that of RT-DETR concat.
+Although the concat baseline remains stronger on medium
+objects and under the stricter IoU criterion, RSC-DETR
+achieves better overall AP with lower model complexity.
+At the same input resolution, it reduces the parameter
+count and GFLOPs by 28.93\% and 7.70\%, respectively.
+These results extend the aerial remote sensing evaluation
+beyond VEDAI and demonstrate an improved balance between
+overall detection accuracy and model complexity, while
+category-wise performance and strict-IoU localization
+remain areas for further improvement.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.90\textwidth]{figures/qualitative_dvtod_rgb_ir_2x4.png}
+\caption{Qualitative detection comparison on DVTOD scene 1857, a low-light UAV scene containing pedestrians and a bicycle. For each method the complete visible (RGB) and infrared (IR) views of the same scene are shown side by side. Red boxes denote correct detections, blue boxes denote false detections, and the yellow box denotes a true positive recovered only by RSC-DETR. Each displayed label gives the predicted category and confidence, with label colors matched to the corresponding detection boxes.}
+\label{fig:qualitative_dvtod}
+\end{figure*}
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.90\textwidth]{1.png}
+\caption{Analysis of ACRHM behavior on VEDAI.
+    (a) Evolution of the effective class weights during training.
+    (b) Class-specific classification-weight changes across training updates.
+    (c) Group-average effective weights for head and tail classes, with
+    shaded regions indicating the class-wise ranges within each group.
+    (d) Relationship between online class reliability and effective class weight.
+    (e) Relationship between the number of training instances and the
+    time-averaged effective class weight.
+    (f) Residual difference between matcher-weight and classification-weight
+    changes, showing that the two weighting branches remain closely aligned
+    while retaining small class- and stage-dependent deviations.}
+\label{fig:qualitative_dvtod}
+\end{figure*}
+
+Figure~\ref{fig:qualitative_dvtod} provides a qualitative
+comparison on a low-light DVTOD scene. The complementary
+behaviour of the two modalities is clearly visible: the RGB
+view is severely underexposed, whereas the thermal view
+preserves the silhouettes of the pedestrians and the bicycle.
+Under this condition, several compared methods either miss
+the bicycle entirely or respond to it with low-confidence
+boxes, while RSC-DETR suppresses these false responses and,
+in addition, recovers a pedestrian that none of the other
+methods detects with sufficient confidence. This example
+illustrates the benefit of harmonized query supervision for
+small and low-contrast targets in degraded illumination.
+
+\subsection{Ablation Study}
+The ablation study is organized according to the progressive design of RSC-DETR, from cross-modal representation learning to supervision coordination. Specifically, SPSF operates at the encoding stage to improve the cross-modal representations provided to the detector. PFHM and ACRHM constrain query supervision from the perspectives of instance-level localization quality and class-level learning reliability, respectively. Dynamic harmonization further adjusts the participation intensity of these auxiliary objectives according to the learning state of the main detection branch. Accordingly, the ablation experiments examine the independent role of each mechanism, the complementarity between the two forms of supervision, and the need to coordinate different training objectives after the feature representation is reshaped. All experiments are conducted on VEDAI using the same training and evaluation settings.
+
+As shown in Table~\ref{tab:vedai_ablation}, PFHM and ACRHM improve localization-quality modeling and class-specific supervision, respectively, while their combination produces a further improvement. This observation indicates that instance-level localization constraints and class-level reliability calibration operate at distinct but complementary levels of optimization. SPSF has a relatively limited effect on overall AP when applied independently, but improves localization under the stricter IoU criterion while reducing the number of parameters and computational cost. This result suggests that shared--private decomposition of high-level cross-modal features suppresses redundant responses and provides a more compact semantic representation for accurate localization.
+
+To better understand how ACRHM modulates class-specific supervision in
+remote sensing object detection, we analyze its dynamic weighting behavior
+during training. As shown in Fig.~\ref{fig:acrhm_behavior}, the effective
+weights vary across both object categories and training stages rather than
+remaining fixed throughout optimization. Such variation is relevant to
+aerial imagery, where vehicle categories differ substantially in sample
+frequency, object scale, background interference, and cross-modal
+discriminability. Tail and difficult categories generally receive stronger
+compensation than well-represented categories. The observed relationships
+between effective weight, online reliability, and class frequency further
+show that the weighting behavior is jointly determined by compensation
+demand and evidence reliability. In particular, ACRHM does not
+indiscriminately amplify an unreliable category; the reliability term acts
+as a safety factor that limits compensation until the accumulated online
+state becomes sufficiently stable. Meanwhile, the small residual differences
+between matcher and classification weighting show that the two branches
+remain closely coordinated while retaining limited branch-specific
+adaptation.
+
+We further investigate how the representation changes introduced by SPSF affect subsequent supervision. SPSF continuously reorganizes the fused feature space during training, whereas the prototype quality in PFHM and the class reliability estimated by ACRHM depend on progressively stabilized query assignments. When these auxiliary objectives participate with fixed intensities, their supervision schedules cannot remain aligned with the evolving feature space. Dynamic harmonization addresses this issue by estimating supervision reliability from training progress, prototype maturity, class reliability, and localization quality, and then progressively adjusting the participation intensity of the auxiliary objectives. The complete configuration achieves the best performance, demonstrating the importance of stage-wise coordination among cross-modal representation learning, localization-quality supervision, and class-reliability calibration. Meanwhile, the complete model reduces the parameter count, computational cost, and inference latency, and dynamic harmonization introduces no additional inference overhead because it is used only during training.
+
+The discrepancy weight $\alpha_s$ is an internal hyperparameter of SPSF that controls the contribution of symmetric cross-modal deviations relative to the shared representation. A small $\alpha_s$ may underuse complementary modality discrepancies, whereas a large $\alpha_s$ may overemphasize inconsistent responses and weaken shared semantic modeling. Therefore, Table~\ref{tab:spsf_alpha_sensitivity} presents a module-level sensitivity analysis designed to isolate the direct effect of $\alpha_s$ on the representations learned by SPSF. This experiment enables SPSF alone, without PFHM, ACRHM, or dynamic harmonization, because these components introduce additional supervision objectives and training interactions that could confound its interpretation. Different values of $\alpha_s$ are evaluated on VEDAI while all other training and evaluation settings remain unchanged.
+
+As shown in Table~\ref{tab:spsf_alpha_sensitivity}, increasing $\alpha_s$ can improve localization under the stricter IoU criterion, whereas an excessively strong discrepancy response reduces overall detection accuracy. Considering the trade-off between overall accuracy and high-quality localization, we select $\alpha_s=0.50$ as a balanced operating point for SPSF. This value is subsequently fixed when SPSF is integrated into the complete RSC-DETR framework, avoiding repeated tuning across different module combinations and ensuring fair subsequent ablation comparisons.
+
+\section{Discussion}
+The core dilemma of long-tailed RGB--IR remote sensing detection lies in the inherent tension among the optimization objectives of cross-modal alignment, high-precision localization, and long-tail calibration. Existing methods often introduce auxiliary supervision to alleviate long-tail bias, but they mostly adopt static weighting strategies that implicitly assume the feature distribution and task difficulty remain stable during training. The shared--private feature fusion module introduced in this paper significantly improves localization accuracy, but the feature distribution drift it induces breaks this static assumption. In the drifted feature space, the geometric-consistency supervision designed for the original feature space and the reliability reweighting based on static statistics are no longer compatible; the two produce antagonism in the gradient space, leading to systematic bias in the confidence estimation of tail classes. This is precisely the fundamental reason why simply stacking modules leads to performance regression. The above phenomenon indicates that the effectiveness of auxiliary supervision depends heavily on the evolution state of the main-branch feature space, and static weights cannot cope with the dynamic changes of the representation structure. To this end, the dynamic harmonization strategy proposed in this paper abandons the fixed-weight paradigm and instead corrects the training dynamics according to the temporal law of feature maturation. This mechanism suppresses unreliable auxiliary supervision in the early training stage to accommodate the distribution drift, and releases the gradients in the later stage to lock in the tail-class discriminative features, thereby achieving collaborative optimization of localization accuracy and long-tail recognition.
+
+The current validation is carried out on VEDAI and M3FD-LT20. Although it can support the above mechanism analysis, it still lacks cross-sensor generalization and adaptability to complex weather conditions. Due to computational resource constraints, VEDAI uses only the fold1 single partition for training and evaluation, and the stability of the model under extremely small-sample conditions has not been further confirmed through multi-fold cross-validation. In addition, the dynamic harmonization relies on training-annotation statistics and online state estimation; we have not validated the method under conditions more extreme than the current benchmarks, such as few-shot scenarios or strong annotation noise, and the stability of the reliability estimation in such scenarios still requires further investigation.
+
+\section{Conclusion}
+This paper proposes RSC-DETR, a unified framework for long-tailed RGB--IR object detection that harmonizes cross-modal feature fusion, localization-quality supervision, and class-reliability calibration. Through the joint optimization of shared--private symmetric fusion, prototype-guided fine-localization harmonization, and annotation-guided class-reliability harmonization, RSC-DETR alleviates cross-modal representation interference, classification--localization inconsistency, and unreliable supervision for underrepresented categories. Experiments on VEDAI and M3FD-LT20 demonstrate that RSC-DETR achieves AP scores of 59.31 and 55.90, respectively, while providing consistent improvements in overall detection accuracy, tail-category recognition, and strict-IoU localization without altering the original RT-DETR inference pathway. Future work will extend the evaluation to multi-sensor and adverse-weather scenarios, investigate high-resolution feature enhancement for extremely small objects, and develop uncertainty-guided noise-robust training strategies to improve generalization in complex open-world environments.
+
+\begin{thebibliography}{99}
+\bibitem{rtdetr}
+Y. Zhao, W. Lv, S. Xu, J. Wei, G. Wang, Q. Dang, Y. Liu, and J. Chen, ``DETRs beat YOLOs on real-time object detection,'' in \emph{Proc. CVPR}, pp. 16965--16974, 2024.
+
+
+\bibitem{yolo}
+J. Redmon, S. Divvala, R. Girshick, and A. Farhadi, ``You only look once: Unified, real-time object detection,'' in \emph{Proc. CVPR}, 2016.
+
+
+\bibitem{kaist}
+S. Hwang, J. Park, N. Kim, Y. Choi, and I. S. Kweon, ``Multispectral pedestrian detection: Benchmark dataset and baseline,'' in \emph{Proc. CVPR}, pp. 1037--1045, 2015.
+
+
+\bibitem{cft}
+Q. Fang, D. Han, and Z. Wang, ``Cross-modality fusion transformer for multispectral object detection,'' arXiv:2111.00273v4, 2022.
+
+
+\bibitem{deyolo}
+Y. Chen, B. Wang, X. Guo, W. Zhu, J. He, X. Liu, and J. Yuan, ``DEYOLO: Dual-feature-enhancement YOLO for cross-modality object detection,'' in \emph{Proc. ICPR}, pp. 236--252, 2024.
+
+
+\bibitem{m2dlif}
+K. Liu, T. Li, and D. Peng, ``Rethinking multi-modal object detection from the perspective of mono-modality feature learning,'' in \emph{Proc. ICCV}, pp. 6364--6373, 2025.
+
+
+\bibitem{vedai}
+S. Razakarivony and F. Jurie, ``Vehicle detection in aerial imagery: A small target detection benchmark,'' \emph{J. Visual Communication and Image Representation}, vol. 34, pp. 187--203, 2016.
+
+
+\bibitem{tardal_m3fd}
+J. Liu, X. Fan, Z. Huang, G. Wu, R. Liu, W. Zhong, and Z. Luo, ``Target-aware dual adversarial learning and a multi-scenario multi-modality benchmark to fuse infrared and visible for object detection,'' in \emph{Proc. CVPR}, 2022.
+
+
+\bibitem{dvtod}
+K. Song, X. Xue, H. Wen, Y. Ji, Y. Yan, and Q. Meng, ``Misaligned visible-thermal object detection: A drone-based benchmark and baseline,'' \emph{IEEE Trans. Intell. Veh.}, vol. 9, no. 11, pp. 7449--7460, 2024.
+
+
+\bibitem{c2former}
+M. Yuan and X. Wei, ``C$^2$Former: Calibrated and complementary transformer for RGB-infrared object detection,'' \emph{IEEE Trans. Geosci. Remote Sens.}, vol. 62, pp. 1--16, 2024.
+
+
+\bibitem{varifocalnet}
+H. Zhang, Y. Wang, F. Dayoub, and N. S\"underhauf, ``VarifocalNet: An IoU-aware dense object detector,'' in \emph{Proc. CVPR}, pp. 8514--8523, 2021.
+
+
+\bibitem{halfway}
+J. Liu, S. Zhang, S. Wang, and D. N. Metaxas, ``Multispectral deep neural networks for pedestrian detection,'' in \emph{Proc. BMVC}, 2016.
+
+
+\bibitem{gaff}
+H. Zhang, E. Fromont, S. Lefevre, and B. Avignon, ``Guided attentive feature fusion for multispectral pedestrian detection,'' in \emph{Proc. WACV}, pp. 72--80, 2021.
+
+
+\bibitem{icafusion}
+J. Shen, Y. Chen, Y. Liu, X. Zuo, H. Fan, and W. Yang, ``ICAFusion: Iterative cross-attention guided feature fusion for multispectral object detection,'' \emph{Pattern Recognition}, vol. 145, Art. no. 109913, 2024.
+
+
+\bibitem{detr}
+N. Carion, F. Massa, G. Synnaeve, N. Usunier, A. Kirillov, and S. Zagoruyko, ``End-to-end object detection with transformers,'' in \emph{Proc. ECCV}, 2020.
+
+
+\bibitem{dn_detr}
+F. Li, H. Zhang, S. Liu, J. Guo, L. M. Ni, and L. Zhang, ``DN-DETR: Accelerate DETR training by introducing query denoising,'' in \emph{Proc. CVPR}, pp. 13619--13627, 2022.
+
+
+\bibitem{dino}
+H. Zhang, F. Li, S. Liu, L. Zhang, H. Su, J. Zhu, L. M. Ni, and H.-Y. Shum, ``DINO: DETR with improved denoising anchor boxes for end-to-end object detection,'' in \emph{Proc. ICLR}, 2023.
+
+
+\bibitem{seesaw}
+J. Wang, W. Zhang, Y. Zang, Y. Cao, J. Pang, T. Gong, K. Chen, Z. Liu, C. C. Loy, and D. Lin, ``Seesaw loss for long-tailed instance segmentation,'' in \emph{Proc. CVPR}, pp. 9695--9704, 2021.
+
+
+\bibitem{eqlv2}
+J. Tan, X. Lu, G. Zhang, C. Yin, and Q. Li, ``Equalization loss v2: A new gradient balance approach for long-tailed object detection,'' in \emph{Proc. CVPR}, pp. 1685--1694, 2021.
+
+
+\bibitem{sffr}
+X. Zuo, Y. Qu, and Y. Zhang, ``SFFR: Spatial-frequency feature reconstruction for multispectral aerial object detection,'' \emph{IEEE Trans. Geosci. Remote Sens.}, vol. 63, Art. no. 5408611, 2025.
+
+
+\bibitem{class_balanced_loss}
+Y. Cui, M. Jia, T.-Y. Lin, Y. Song, and S. Belongie, ``Class-balanced loss based on effective number of samples,'' in \emph{Proc. CVPR}, 2019.
+
+
+\bibitem{rtdetrv3}
+S. Wang, C. Xia, F. Lv, and Y. Shi, ``RT-DETRv3: Real-time end-to-end object detection with hierarchical dense positive supervision,'' in \emph{Proc. WACV}, 2025.
+
+
+\bibitem{cmaff}
+Q. Fang and Z. Wang, ``Cross-modality attentive feature fusion for object detection in multispectral remote sensing imagery,'' \emph{Pattern Recognition}, vol. 130, Art. no. 108786, 2022.
+
+
+\bibitem{rgbt_fusion}
+W. El Ahmar, Y. Massoud, D. Kolhatkar, H. AlGhamdi, M. Alja'afreh, R. Hammoud, and R. Laganiere, ``Enhanced thermal-RGB fusion for robust object detection,'' in \emph{Proc. CVPR Workshops}, pp. 365--374, 2023.
+
+
+\bibitem{damsdet}
+J. Guo, C. Gao, F. Liu, D. Meng, and X. Gao, ``DAMSDet: Dynamic adaptive multispectral detection transformer with competitive query selection and adaptive feature fusion,'' in \emph{Proc. ECCV}, pp. 464--480, 2024.
+
+
+\bibitem{gmdetr}
+Y. Xiao, F. Meng, Q. Wu, L. Xu, M. He, and H. Li, ``GM-DETR: Generalized multispectral detection transformer with efficient fusion encoder for visible-infrared detection,'' in \emph{Proc. CVPR Workshops}, pp. 5541--5549, 2024.
+
+\bibitem{wavemamba}
+H. Zhu, W. Dong, L. Yang, H. Li, Y. Yang, Y. Ren, Q. Zhu, Z. Feng, C. Li, S. Lin, R. Wang, X. Luo, and B. Zhang, ``WaveMamba: Wavelet-driven Mamba fusion for RGB-infrared object detection,'' in \emph{Proc. ICCV}, pp. 11219--11229, 2025.
+
+\bibitem{mipa}
+H. R. Medeiros, D. Latortue, E. Granger, and M. Pedersoli, ``Mixed patch visible-infrared modality agnostic object detection,'' in \emph{Proc. WACV}, pp. 9023--9032, 2025.
+
+
+\bibitem{lvis}
+A. Gupta, P. Doll\'ar, and R. Girshick, ``LVIS: A dataset for large vocabulary instance segmentation,'' in \emph{Proc. CVPR}, pp. 5356--5364, 2019.
+
+
+\bibitem{bags}
+Y. Li, T. Wang, B. Kang, S. Tang, C. Wang, J. Li, and J. Feng, ``Overcoming classifier imbalance for long-tail object detection with balanced group softmax,'' in \emph{Proc. CVPR}, pp. 10991--11000, 2020.
+
+
+\bibitem{gaussian_logit}
+M. Li, Y.-m. Cheung, and Y. Lu, ``Long-tailed visual recognition via Gaussian clouded logit adjustment,'' in \emph{Proc. CVPR}, pp. 6929--6938, 2022.
+
+
+\bibitem{focal_loss}
+T.-Y. Lin, P. Goyal, R. Girshick, K. He, and P. Doll\'ar, ``Focal loss for dense object detection,'' in \emph{Proc. ICCV}, 2017.
+
+
+\bibitem{gfl}
+X. Li, W. Wang, L. Wu, S. Chen, X. Hu, J. Li, J. Tang, and J. Yang, ``Generalized focal loss: Learning qualified and distributed bounding boxes for dense object detection,'' in \emph{Proc. NeurIPS}, vol. 33, pp. 21002--21012, 2020.
+
+
+\bibitem{faster_rcnn}
+S. Ren, K. He, R. Girshick, and J. Sun, ``Faster R-CNN: Towards real-time object detection with region proposal networks,'' in \emph{Proc. NeurIPS}, 2015.
+
+
+\bibitem{deformable_detr}
+X. Zhu, W. Su, L. Lu, B. Li, X. Wang, and J. Dai, ``Deformable DETR: Deformable transformers for end-to-end object detection,'' in \emph{Proc. ICLR}, 2021.
+
+
+\bibitem{codetr}
+Z. Zong, G. Song, and Y. Liu, ``DETRs with collaborative hybrid assignments training,'' in \emph{Proc. ICCV}, 2023.
+
+
+\bibitem{msdetr}
+C. Zhao, Y. Sun, W. Wang, Q. Chen, E. Ding, Y. Yang, and J. Wang, ``MS-DETR: Efficient DETR training with mixed supervision,'' in \emph{Proc. CVPR}, pp. 17027--17036, 2024.
+
+\bibitem{deim}
+S. Huang, Z. Lu, X. Cun, Y. Yu, X. Zhou, and X. Shen, ``DEIM: DETR with improved matching for fast convergence,'' in \emph{Proc. CVPR}, pp. 15162--15171, 2025.
+
+\bibitem{c2dffnet}
+Y. Zhang, J. Chen, J. Wang, D. Shi, S. Han, and L. Deng, ``C2DFF-Net for object detection in multimodal remote sensing images,'' \emph{IEEE Trans. Geosci. Remote Sens.}, vol. 63, pp. 1--16, 2025.
+
+
+\bibitem{rsvdet}
+X. Wang, C. Lin, Y. Pan, and R. Wang, ``RSVDet: Remote sensing small object detection model inspired by neuronal mechanisms in visual pathways,'' \emph{IEEE Trans. Circuits Syst. Video Technol.}, vol. 36, no. 4, pp. 4021--4036, Apr. 2026, doi: 10.1109/TCSVT.2025.3628010.
+
+
+\bibitem{yolov11_rgbt}
+F. Wang, ``YOLOv11-RGBT: Towards a comprehensive single-stage multispectral object detection framework,'' arXiv:2506.14696, 2025.
+
+
+\bibitem{lcafnet}
+W. Wu, H. Zhang, X. Zhang, H. Yin, and Y. Zhang, ``Lightweight modal-guided cross-attention fusion network for visible-infrared object detection,'' \emph{Pattern Recognition}, vol. 177, Art. no. 113350, 2026.
+
+
+\bibitem{darfnet}
+J. Huang, J. Chen, R. Luo, Y. Lu, J. Yang, and Z. Wu, ``DARFNet: A divergence-aware reciprocal fusion network for multispectral feature alignment and fusion,'' \emph{IEEE J. Sel. Topics Appl. Earth Observ. Remote Sens.}, vol. 19, pp. 4779--4789, 2025.
+
+
+\bibitem{cmfadet}
+C. Yu and Y. Shin, ``A cross-modality feature adaptive interaction approach for RGB-infrared object detection in aerial imagery,'' \emph{IEEE Trans. Geosci. Remote Sens.}, vol. 64, pp. 1--15, 2026.
+
+
+\bibitem{cldyn}
+Z. Yang, Y. Liu, J. Cheng, Z. Zhu, Y. Zhang, and H. Li, ``Customized fusion: A closed-loop dynamic network for adaptive multi-task-aware infrared-visible image fusion,'' in \emph{Proc. CVPR}, pp. 188--198, 2026.
+
+
+\bibitem{protonet}
+J. Snell, K. Swersky, and R. Zemel, ``Prototypical networks for few-shot learning,'' in \emph{Proc. NeurIPS}, vol. 30, 2017.
+
+\bibitem{align_detr}
+Z. Cai, S. Liu, G. Wang, Z. Li, Z. Ge, X. Zhang, and D. Huang, ``Align-DETR: Enhancing end-to-end object detection with aligned loss,'' in \emph{Proc. BMVC}, 2024.
+
+\bibitem{salience_detr}
+X. Hou, M. Liu, S. Zhang, P. Wei, and B. Chen, ``Salience DETR: Enhancing detection transformer with hierarchical salience filtering refinement,'' in \emph{Proc. CVPR}, pp. 17574--17583, 2024.
+
+\bibitem{hdetr}
+D. Jia, Y. Yuan, H. He, X. Wu, H. Yu, W. Lin, L. Sun, C. Zhang, and H. Hu, ``DETRs with hybrid matching,'' in \emph{Proc. CVPR}, pp. 19702--19712, 2023.
+
+\bibitem{group_detr}
+Q. Chen, X. Chen, J. Wang, S. Zhang, K. Yao, H. Feng, J. Han, E. Ding, G. Zeng, and J. Wang, ``Group DETR: Fast DETR training with group-wise one-to-many assignment,'' in \emph{Proc. ICCV}, pp. 6633--6642, 2023.
+
+\end{thebibliography}
+\end{document}
