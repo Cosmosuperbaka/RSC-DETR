@@ -34,14 +34,34 @@ three datasets respectively.
 
 ## Repository layout
 
-This repository contains the **figure-rendering, evaluation and reproducibility
-tooling** for the paper. It intentionally excludes datasets, training runs and
-model weights — those live on the experiment server (see
-[docs/PATHS.md](docs/PATHS.md)), and are referenced through
-[`rscdetr_paths.py`](rscdetr_paths.py) rather than hard-coded paths.
+This repository contains the **complete model implementation** of RSC-DETR
+(`src/`, `configs/`, the `tools/train.py` entry point) together with the
+**figure-rendering, evaluation and reproducibility tooling** for the paper.
+Datasets are not redistributed — download links and preparation steps live in
+[datasets/README.md](datasets/README.md). The released model weights are
+tracked through **Git LFS** under `weights/` (see below). Experiment paths on
+the server are referenced through [`rscdetr_paths.py`](rscdetr_paths.py) rather
+than hard-coded paths.
 
 ```
 RSC-DETR/
+├── src/                                # model, losses, data, solvers
+│   ├── core/                           # config / workspace plumbing
+│   ├── data/                           # dual-stream dataloaders & transforms
+│   ├── nn/                             # backbones (PResNet) & common blocks
+│   ├── optim/                          # optimizer / EMA / AMP / warmup
+│   ├── solver/                         # train & evaluation engines
+│   └── zoo/rtdetr/                     # RSC-DETR, SPSF, PFHM, ACRHM, harmonizer
+├── configs/
+│   ├── RSC-DETR_VEDAI.yml              # final VEDAI config (1024, fold-1)
+│   └── RSC-DETR_M3FD-LT20.yml          # final M3FD-LT20 config (b8, 45e)
+├── weights/                            # released checkpoints (Git LFS, *.pth)
+├── datasets/README.md                  # dataset download & preparation guide
+├── tools/
+│   ├── train.py                        # training / evaluation entry point
+│   ├── collect_env.py                  # re-capture the environment lock
+│   ├── check_dataset.py                # dataset integrity gate
+│   └── hash_artifacts.py               # SHA-256 manifests for run directories
 ├── rscdetr_paths.py                    # every experiment path, env-var driven
 ├── figures/
 │   ├── render_fig1_motivation.py       # Fig. 1  (cross-modal confidence gap)
@@ -75,17 +95,18 @@ RSC-DETR/
 │   └── benchmark_latency.py            # enforces docs/BENCHMARK_PROTOCOL.md
 ├── export/
 │   └── export_model.py                 # ONNX + TorchScript, with provenance
-├── tools/
-│   ├── collect_env.py                  # re-capture the environment lock
-│   ├── check_dataset.py                # dataset integrity gate
-│   └── hash_artifacts.py               # SHA-256 manifests for run directories
 ├── tests/
 │   └── test_smoke.py                   # pytest regression gate
-└── docs/
-    ├── PATHS.md                        # dataset / checkpoint / prediction layout
-    ├── REPRODUCIBILITY.md              # what exists, what is missing, in what order
-    ├── BENCHMARK_PROTOCOL.md           # the timing protocol — cite this
-    └── MULTISEED_PLAN.md               # the not-yet-run multi-seed job
+├── docs/
+│   ├── paper/main.tex                  # the manuscript source
+│   ├── FINAL_VERSION_AUDIT.json        # source-file / class-name mapping record
+│   ├── VALIDATION.json                 # packaging validation record
+│   ├── PATHS.md                        # dataset / checkpoint / prediction layout
+│   ├── REPRODUCIBILITY.md              # what exists, what is missing, in what order
+│   ├── BENCHMARK_PROTOCOL.md           # the timing protocol — cite this
+│   └── MULTISEED_PLAN.md               # the not-yet-run multi-seed job
+├── LICENSE / NOTICE / LICENSES/        # licensing and third-party notices
+└── MANIFEST.json                       # SHA-256 manifest of the packaged sources
 ```
 
 **Start with [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md)** if you are
@@ -148,6 +169,59 @@ change it, any latency figure from this repository becomes non-comparable, and
 the lock has to be re-captured with `python3 tools/collect_env.py --write`.
 
 For the figure renderers alone, `Pillow` is the only hard requirement.
+
+## Training and evaluation
+
+All commands run from the repository root. Two final configs are provided
+(VEDAI and M3FD-LT20; see the config audit trail in
+[docs/FINAL_VERSION_AUDIT.json](docs/FINAL_VERSION_AUDIT.json)):
+
+```bash
+pip install -r requirements.txt          # install an CUDA-matched torch first
+
+# training
+python tools/train.py -c configs/RSC-DETR_VEDAI.yml -d cuda --use-amp --seed 3407
+python tools/train.py -c configs/RSC-DETR_M3FD-LT20.yml -d cuda --use-amp --seed 42
+
+# evaluation with a released checkpoint
+python tools/train.py -c configs/RSC-DETR_VEDAI.yml -d cuda --test-only -r weights/<vedai>.pth
+python tools/train.py -c configs/RSC-DETR_M3FD-LT20.yml -d cuda --test-only -r weights/<m3fd>.pth
+```
+
+Recipe summary — VEDAI: dual-stream PResNet-50, 1024 input, batch 4, 30 epochs,
+LR decay at epoch 27. M3FD-LT20: dual-stream PResNet-50, native-resolution
+input/padding, batch 8, 45 epochs, LR decay at epoch 36. With
+`pretrained: true` the ImageNet PResNet-50 backbone weights must be fetched
+separately.
+
+## Datasets
+
+Neither dataset is redistributed with this repository. Download them from the
+official sources and lay them out as described in
+[datasets/README.md](datasets/README.md):
+
+| Dataset | Official source |
+|---|---|
+| VEDAI | <https://downloads.greyc.fr/vedai/> (GREYC, Razakarivony & Jurie 2015) |
+| M3FD | <https://github.com/JinyuanLiu-CV/TarDAL> (TarDAL, Liu et al., ACCV 2022) |
+
+The COCO-format annotation files used by this project (VEDAI fold-1 / 8-class
+HBB; M3FD-LT20 long-tailed split, seed 42) are prepared from the official
+releases; the conversion rules are documented in the dataset loader sources.
+
+## Model weights (Git LFS)
+
+The released checkpoints are tracked with **Git LFS** in `weights/`:
+
+```bash
+git lfs install          # once per machine, before the first clone
+git clone https://github.com/Cosmosuperbaka/RSC-DETR.git
+cd RSC-DETR && git lfs pull   # fetch the weights if they were skipped
+```
+
+The mapping between each weight file, its config, seed and evaluation artefacts
+is indexed in [`registry/experiments.yaml`](registry/experiments.yaml); hashes
+are recorded with `tools/hash_artifacts.py`.
 
 ## Data and checkpoints
 

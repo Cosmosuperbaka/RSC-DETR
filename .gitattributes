@@ -1,0 +1,15 @@
+# Line endings: normalize to LF for text sources (rule set from the detr-all
+# release package)
+* text=auto
+*.py text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.txt text eol=lf
+*.tex text eol=lf
+LICENSE text eol=lf
+NOTICE text eol=lf
+
+# Model weights are stored through Git LFS
+weights/*.pth filter=lfs diff=lfs merge=lfs -text
