@@ -69,7 +69,10 @@ runs:
     method: "RSC-DETR"
     seed: 3407
     config: "rtdetrv2_pytorch/configs/rtdetrv2/rtdetrv2_r50vd_vedai_1024_test-x1x3-v19c-spsf_seed3407_fold01_30e.yml"
-    weights: "results/VEDAI/v19c-spsf-s3407-10fold/<fold>/best.pth"
+    weights: "results/VEDAI/v19c-spsf-s3407-10fold/fold02/best.pth"
+    # fold01 checkpoint is not present on the experiment server; the released
+    # LFS copy below is the fold02 EMA-eval state. Verified 2026-10-10.
+    lfs_release: "weights/vedai_rscdetr_fold02_s3407_1024_eval.pth"
     log: TODO
     metrics:
       AP: TODO
@@ -83,8 +86,9 @@ runs:
     method: "RSC-DETR"
     seed: 42
     config: "rtdetrv2_pytorch/configs/rtdetrv2/rtdetrv2_r50vd_m3fd_lt20_seed42_x1x3_v19c_spsf_native_res_b8_45e.yml"
-    weights: TODO
-    log: TODO
+    weights: "~/re-detr-last/ablations/rtdetr-x1x3-v19c-spsf-native-res-b8-45e_M3FD-LT20_b8-45e/best_M3FD-LT20_b8-45e.pth"
+    lfs_release: "weights/m3fd_lt20_rscdetr_s42_b8_1024_eval.pth"
+    log: "~/re-detr-last/ablations/rtdetr-x1x3-v19c-spsf-native-res-b8-45e_M3FD-LT20_b8-45e/log.txt"
     metrics:
       AP: 55.90          # manuscript table
       AP_log: 55.95      # weight-provenance log -- DISCREPANCY, see below
@@ -103,8 +107,11 @@ runs:
     method: "RSC-DETR"
     seed: 42
     config: "rtdetrv2_pytorch/configs/rtdetrv2/rtdetrv2_r50vd_rtdod_hbb_seed42_1920_shdetr_15e_scaled.yml"
-    weights: "result/RTDOD_HBB_3class/<run>/"
-    log: "result/RTDOD_HBB_3class/<run>.log"
+    weights: "~/re-detr-last/result/RTDOD_HBB_3class/shdetr_c2_1920_b2_15e_seed42/best.pth"
+    lfs_release: "weights/dvtod_rscdetr_s42_1920_eval.pth"
+    log: "~/re-detr-last/result/RTDOD_HBB_3class/perclass_sh_c2_best.log"
+    # the log's [eval_per_class_test] resume= line names the checkpoint above;
+    # predictions live in result/RTDOD_HBB_3class/perclass_sh_c2_best/
     metrics:
       AP: TODO
       AP50: TODO
