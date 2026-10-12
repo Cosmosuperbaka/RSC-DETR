@@ -2,8 +2,8 @@
 
 Reference code for the paper
 
-> **Symmetric Fusion and Reliability-Aware Supervision for Long-Tailed RGB–IR
-> Remote-Sensing Detection**
+> **RSC-DETR: Symmetric Harmonized Dual-Stream DETR for Long-Tailed RGB-IR
+> Object Detection**
 
 RSC-DETR is a dual-stream RGB–IR detector for aerial remote sensing. It keeps the
 RT-DETR inference pathway unchanged and adds three training-side components plus
@@ -54,7 +54,8 @@ RSC-DETR/
 │   └── zoo/rtdetr/                     # RSC-DETR, SPSF, PFHM, ACRHM, harmonizer
 ├── configs/
 │   ├── RSC-DETR_VEDAI.yml              # final VEDAI config (1024, fold-1)
-│   └── RSC-DETR_M3FD-LT20.yml          # final M3FD-LT20 config (b8, 45e)
+│   ├── RSC-DETR_M3FD-LT20.yml          # final M3FD-LT20 config (b8, 45e)
+│   └── RSC-DETR_DVTOD.yml              # final DVTOD config (1088x1920, seed 42)
 ├── weights/                            # released checkpoints (Git LFS, *.pth)
 ├── datasets/README.md                  # dataset download & preparation guide
 ├── tools/
@@ -172,8 +173,8 @@ For the figure renderers alone, `Pillow` is the only hard requirement.
 
 ## Training and evaluation
 
-All commands run from the repository root. Two final configs are provided
-(VEDAI and M3FD-LT20; see the config audit trail in
+All commands run from the repository root. Three final configs are provided
+(VEDAI, M3FD-LT20 and DVTOD; see the config audit trail in
 [docs/FINAL_VERSION_AUDIT.json](docs/FINAL_VERSION_AUDIT.json)):
 
 ```bash
@@ -186,13 +187,18 @@ python tools/train.py -c configs/RSC-DETR_M3FD-LT20.yml -d cuda --use-amp --seed
 # evaluation with a released checkpoint
 python tools/train.py -c configs/RSC-DETR_VEDAI.yml -d cuda --test-only -r weights/<vedai>.pth
 python tools/train.py -c configs/RSC-DETR_M3FD-LT20.yml -d cuda --test-only -r weights/<m3fd>.pth
+python tools/train.py -c configs/RSC-DETR_DVTOD.yml -d cuda --test-only -r weights/dvtod_rscdetr_s42_1920_eval.pth
 ```
 
 Recipe summary — VEDAI: dual-stream PResNet-50, 1024 input, batch 4, 30 epochs,
 LR decay at epoch 27. M3FD-LT20: dual-stream PResNet-50, native-resolution
-input/padding, batch 8, 45 epochs, LR decay at epoch 36. With
+input/padding, batch 8, 45 epochs, LR decay at epoch 36. DVTOD: dual-stream
+PResNet-50, 1088×1920 input, batch 2, 15 epochs, LR decay at epoch 13. With
 `pretrained: true` the ImageNet PResNet-50 backbone weights must be fetched
-separately.
+separately. Note: the DVTOD training run used a retired internal balance
+variant; the shipped config carries the final harmonization strategy, which
+affects training-time loss routing only — the released DVTOD checkpoint
+reproduces the reported evaluation numbers under `--test-only`.
 
 ## Datasets
 
@@ -322,12 +328,13 @@ python3 benchmark/benchmark_latency.py --help      # read the protocol first
 
 ```bibtex
 @article{chen2026rscdetr,
-  title   = {Symmetric Fusion and Reliability-Aware Supervision
-             for Long-Tailed {RGB--IR} Remote-Sensing Detection},
+  title   = {{RSC-DETR}: Symmetric Harmonized Dual-Stream {DETR} for
+             Long-Tailed {RGB-IR} Object Detection},
   author  = {Chen, Yi and Deng, Lingjun and Zhong, Chuen-Ho and Liu, Chang and Dong, Yanni},
   journal = {IEEE Journal of Selected Topics in Applied Earth Observations
              and Remote Sensing},
-  year    = {2026}
+  year    = {2026},
+  note    = {Manuscript under review}
 }
 ```
 
