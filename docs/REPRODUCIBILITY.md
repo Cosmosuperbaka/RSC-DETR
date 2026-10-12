@@ -47,7 +47,7 @@ Last audited: **2026-10-03**, against the live experiment server.
 | Overall + per-class metrics | ✅ | manuscript Table |
 | Scale and head/tail metrics | ✅ | manuscript Table |
 | Qualitative figure | ✅ | `figures/render_m3fd_qualitative.py` |
-| **Single authoritative AP (55.90 vs 55.95)** | ❌ | **Highest priority.** Two numbers circulate: `55.90` in the manuscript table, `55.95` in the weight-provenance log. Both trace to the same run directory. The 0.05 gap is almost certainly a re-evaluation on a de-duplicated test set that was never promoted to the manuscript. Must be resolved by re-evaluating the released checkpoint once and freezing the result. |
+| **Single authoritative AP (55.90 vs 55.95)** | ✅ (2026-10-12) | **Resolved.** The re-evaluation of the released checkpoint on the standard test split exists at `outputs/m3fd_lt20_s42_b8_valbest_test_requested/v19c_spsf/` (`per_class.json`, 6-class means **AP 55.897 / AP50 84.088 / AP75 60.507**) and matches the manuscript value **55.90, which is now frozen**. The 55.95 figure traces to a re-evaluation on a de-duplicated test variant and is not the manuscript number. |
 | **Params / GFLOPs column** | 🟡 | `evaluation/measure_complexity.py` supports M3FD but no measured row has been recorded. |
 | **Multi-seed mean ± std** | ❌ | Same as VEDAI. 🔒 |
 | **Latency and peak memory** | ❌ | Needs the benchmark protocol. 🔒 |
@@ -96,11 +96,11 @@ Mirrors the priority list, with the current blocker called out for each step.
 
 | # | Step | Blocker | Cost |
 |---|---|---|---|
-| 1 | Resolve the M3FD AP discrepancy (55.90 vs 55.95) and freeze one number | none — just re-evaluate the released checkpoint | ~1 GPU-hour |
-| 2 | Archive DVTOD config + weights + logs + hashes into the registry | none | ~1 hour, no GPU |
+| 1 | Resolve the M3FD AP discrepancy (55.90 vs 55.95) and freeze one number | **done** (2026-10-12) — re-evaluated from the released weights: 55.897 → frozen as 55.90 | — |
+| 2 | Archive DVTOD config + weights + logs + hashes into the registry | **done** (2026-10-12) — `configs/RSC-DETR_DVTOD.yml` recovered from the run's config dump; registry filled | — |
 | 3 | Run ≥3 seeds for all three datasets | GPU time | ~3x current training budget |
 | 4 | Lock the software environment | **done** | — |
 | 5 | Stand up benchmarking and regression testing | **done** (scripts); needs a quiet GPU to record the numbers | ~2 GPU-hours |
 
-Steps 1 and 2 need no new code and no new GPU allocation — they are pure
-bookkeeping on artefacts that already exist. Do them first.
+Step 1 and 2 are complete — the remaining work is step 3 (multi-seed) and
+step 5 (timing on a quiet GPU).

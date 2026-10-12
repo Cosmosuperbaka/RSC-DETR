@@ -14,7 +14,7 @@
 #   unresolved  - the number itself is in doubt, see docs/REPRODUCIBILITY.md
 
 schema_version: 1
-last_updated: "2026-10-03"
+last_updated: "2026-10-12"
 
 # --------------------------------------------------------------------------
 # Conventions
@@ -68,18 +68,46 @@ runs:
     dataset: vedai
     method: "RSC-DETR"
     seed: 3407
+    config: "rtdetrv2_pytorch/configs/rtdetrv2/rtdetrv2_r50vd_vedai_1024_test-x1x3-v19c-spsf_seed3407_30e.yml"
+    # headline fold-1 run; config name recorded by valbest_test.log
+    # (the registry previously used the ..._fold01_30e.yml spelling)
+    weights: "~/re-detr-last/result/VEDAI/test-x1x3-v19c-spsf_seed3407/best.pth"
+    lfs_release: "weights/vedai_rscdetr_fold01_s3407_1024_eval.pth"
+    log: "~/re-detr-last/result/VEDAI/test-x1x3-v19c-spsf_seed3407/valbest_test.log"
+    metrics:
+      AP: 59.31         # re-eval of the released EMA weights: 59.311
+      AP50: 88.54       # re-eval: 88.536
+      AP75: 71.47       # re-eval: 71.467
+    hashes:
+      config: TODO
+      weights: d4f31f19a617108998cfbf19e44df1a30842b9e3294f3d92683992f5e2a64efe   # LFS copy, server==client verified 2026-10-12
+      predictions: TODO
+    status: partial
+    note: >
+      The re-evaluation artefacts live next to the run:
+      valbest_test.log (per-class table) and valbest_test_perclass/per_class.json
+      (8-class means AP 59.311 / AP50 88.536 / AP75 71.467), which match the
+      manuscript headline 59.31.
+
+  - id: vedai-rscdetr-fold02
+    dataset: vedai
+    method: "RSC-DETR"
+    seed: 3407
     config: "rtdetrv2_pytorch/configs/rtdetrv2/rtdetrv2_r50vd_vedai_1024_test-x1x3-v19c-spsf_seed3407_fold01_30e.yml"
     weights: "results/VEDAI/v19c-spsf-s3407-10fold/fold02/best.pth"
-    # fold01 checkpoint is not present on the experiment server; the released
-    # LFS copy below is the fold02 EMA-eval state. Verified 2026-10-10.
     lfs_release: "weights/vedai_rscdetr_fold02_s3407_1024_eval.pth"
-    log: TODO
+    log: "results/VEDAI/v19c-spsf-s3407-10fold/fold02/log.txt"
     metrics:
       AP: TODO
       AP50: TODO
       AP75: TODO
-    hashes: {config: TODO, weights: TODO, predictions: TODO}
+    hashes:
+      config: TODO
+      weights: 1258aefd5dccf40f5deda8d418c74433b58a8aa814b74bf61889351bcc4f3caf   # LFS copy, server==client verified 2026-10-10
+      predictions: TODO
     status: partial
+    note: >
+      10-fold member (fold 2). Released alongside the headline fold-1 weights.
 
   - id: m3fd-rscdetr
     dataset: m3fd_lt20
@@ -90,38 +118,52 @@ runs:
     lfs_release: "weights/m3fd_lt20_rscdetr_s42_b8_1024_eval.pth"
     log: "~/re-detr-last/ablations/rtdetr-x1x3-v19c-spsf-native-res-b8-45e_M3FD-LT20_b8-45e/log.txt"
     metrics:
-      AP: 55.90          # manuscript table
-      AP_log: 55.95      # weight-provenance log -- DISCREPANCY, see below
-      AP50: TODO
-    hashes: {config: TODO, weights: TODO, predictions: TODO}
-    status: unresolved
+      AP: 55.90         # re-eval of the released EMA weights: 55.897
+      AP50: 84.09       # re-eval: 84.088
+      AP75: 60.51       # re-eval: 60.507
+    hashes:
+      config: TODO
+      weights: e4f3e021bcbeff33c35f6541c762cb94e37aef408db85dfe1cd168efd10ed307   # LFS copy, server==client verified 2026-10-10
+      predictions: TODO
+    status: partial
     note: >
-      Two AP values circulate for this run: 55.90 (manuscript) and 55.95
-      (weight-provenance log). Both point at the same run directory. This is
-      the number-one item in docs/REPRODUCIBILITY.md: re-evaluate the released
-      checkpoint once, record which split was used, and overwrite whichever
-      number turns out to be wrong.
+      Resolved 2026-10-12. The re-evaluation of the released checkpoint on the
+      standard test split exists at
+      outputs/m3fd_lt20_s42_b8_valbest_test_requested/v19c_spsf/
+      (per_class.json; 6-class means AP 55.897 / AP50 84.088 / AP75 60.507)
+      and matches the manuscript value 55.90, which is therefore frozen.
+      The 55.95 figure traces to a re-evaluation on a de-duplicated test
+      variant and is NOT the manuscript number; see docs/REPRODUCIBILITY.md.
 
   - id: dvtod-rscdetr
     dataset: dvtod
     method: "RSC-DETR"
     seed: 42
-    config: "rtdetrv2_pytorch/configs/rtdetrv2/rtdetrv2_r50vd_rtdod_hbb_seed42_1920_shdetr_15e_scaled.yml"
+    config: "configs/RSC-DETR_DVTOD.yml"
+    # shipped top-level config, recovered from the run's own tensorboard config
+    # dump and renamed to the public symbols; training-time file was
+    # configs/rtdod_1920_shdetr_c2_15e_b2_seed42.yml (include chain off
+    # rtdetrv2_r50vd_rtdod_hbb_seed42_1920_shdetr_15e_scaled.yml), since deleted
+    # on the server. Training used the retired 'v19c' balance variant; the
+    # shipped config carries final_harmonization (evaluation is unaffected).
     weights: "~/re-detr-last/result/RTDOD_HBB_3class/shdetr_c2_1920_b2_15e_seed42/best.pth"
     lfs_release: "weights/dvtod_rscdetr_s42_1920_eval.pth"
     log: "~/re-detr-last/result/RTDOD_HBB_3class/perclass_sh_c2_best.log"
     # the log's [eval_per_class_test] resume= line names the checkpoint above;
     # predictions live in result/RTDOD_HBB_3class/perclass_sh_c2_best/
     metrics:
-      AP: TODO
-      AP50: TODO
-      AP75: TODO
-    hashes: {config: TODO, weights: TODO, predictions: TODO}
+      AP: 56.66         # per-class means: 56.664
+      AP50: 89.50       # 89.495
+      AP75: 61.21       # 61.212
+    hashes:
+      config: c2c51709cd61d593778db21036c2344267adda0d7ee8538d3d3d39edf7a59b7d   # configs/RSC-DETR_DVTOD.yml
+      weights: 04acfa9296594e3f92b31a4fad7873c363f72a43eae31931440d255a6443e2f7   # LFS copy, server==client verified 2026-10-10
+      predictions: 11b9470d7a591ec11ecfb8f914c98ebe03396959510ed373b49549b6a8d457ae   # perclass_sh_c2_best/predictions.json
     status: partial
     note: >
-      Four candidate configs exist (15e / 20e x concat / rscdetr, all
-      _scaled). The canonical one has not been declared. Fix that before
-      filling in the metrics.
+      Validation numbers (Person / Car / Bicycle); no independent test split
+      exists. Metrics computed from result/RTDOD_HBB_3class/perclass_sh_c2_best/
+      per_class.json, which match the manuscript (56.66 / 89.49 / 61.21).
 
 # --------------------------------------------------------------------------
 # Multi-seed runs -- not yet executed

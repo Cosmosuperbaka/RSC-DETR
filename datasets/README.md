@@ -12,20 +12,29 @@ datasets/
 │       ├── vedai_fold01_train_class8.json
 │       ├── vedai_fold01_val_class8.json
 │       └── vedai_fold01_test_class8.json
-└── M3FD lt20/
-    ├── visible/
-    ├── infrared/
+├── M3FD lt20/
+│   ├── visible/
+│   ├── infrared/
+│   └── annotations/
+│       ├── instances_train.json
+│       ├── instances_val.json
+│       └── instances_test.json
+├── DVTOD dataset/          (directory name contains spaces)
+│   ├── vis1/images/{train,val}/
+│   └── ir1/images/{train,val}/
+└── RTDOD_HBB_3class/
     └── annotations/
         ├── instances_train.json
-        ├── instances_val.json
-        └── instances_test.json
+        └── instances_val.json
 ```
 
-`M3FD lt20` 的目录名包含空格。如果数据放在其他位置，请同时更新配置内所有 `img_folder`、`ir_folder`、`ann_file` 和 `annotation_file`。
+`M3FD lt20` 与 `DVTOD dataset` 的目录名包含空格。如果数据放在其他位置，请同时更新配置内所有 `img_folder`、`ir_folder`、`ann_file` 和 `annotation_file`。
 
 VEDAI 使用 fold-1、1024 HBB、8 个标注类别协议；沿用原配置的类别编号与输出维度，不要仅依据类别数量修改 `num_classes`。图像读取与 RGB/IR 配对规则见 [VEDAI 数据加载器](../src/data/dataset/vedai_dataset.py)。
 
 M3FD-LT20 使用长尾训练划分，训练、验证和测试路径分别配置；图像读取与模态配对规则见 [M3FD 数据加载器](../src/data/dataset/m3fd_dataset.py)。此包不提供划分生成脚本或原始数据下载。
+
+DVTOD 使用 Person / Car / Bicycle 三类、1088×1920 输入协议，可见光与红外图像分别位于 `DVTOD dataset/vis1` 与 `DVTOD dataset/ir1`，标注为 COCO 格式（`RTDOD_HBB_3class/annotations/instances_{train,val}.json`）；报告数字为验证集结果。该数据集不公开分发，目录布局与 [RSC-DETR_DVTOD.yml](../configs/RSC-DETR_DVTOD.yml) 保持一致。
 
 `.gitignore` 会忽略此目录中的数据实体，仅保留本说明。
 

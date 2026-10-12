@@ -1,0 +1,347 @@
+# RSC-DETR final configuration for DVTOD (RTDOD_HBB_3class, seed 42, 1088x1920).
+# Recovered from the training run's own config dump and brought to the public
+# symbol names (see docs/FINAL_VERSION_AUDIT.json). Training used the retired
+# 'v19c' balance variant; this config ships the final_harmonization strategy,
+# which affects training-time loss routing only — evaluation via
+# `--test-only -r weights/dvtod_rscdetr_s42_1920_eval.pth` reproduces the
+# reported numbers (AP 56.66 / AP50 89.49 / AP75 61.21).
+# 'DVTOD dataset' directory names intentionally contain spaces.
+task: detection
+evaluator:
+  type: CocoEvaluator
+  iou_types:
+  - bbox
+num_classes: 3
+remap_mscoco_category: false
+train_dataloader:
+  type: DataLoader
+  dataset:
+    type: M3FDDetection
+    img_folder: ./datasets/DVTOD dataset/vis1/images/train
+    ir_folder: ./datasets/DVTOD dataset/ir1/images/train
+    ann_file: ./datasets/RTDOD_HBB_3class/annotations/instances_train.json
+    return_masks: false
+    transforms:
+      type: DualCompose
+      ops:
+      - type: Resize
+        size:
+        - 1088
+        - 1920
+      - type: RandomPhotometricDistort
+        p: 0.5
+      - type: RandomZoomOut
+        fill: 0
+      - type: RandomIoUCrop
+        p: 0.8
+      - type: SanitizeBoundingBoxes
+        min_size: 1
+      - type: RandomHorizontalFlip
+      - type: Resize
+        size:
+        - 1088
+        - 1920
+      - type: SanitizeBoundingBoxes
+        min_size: 1
+      - type: ConvertPILImage
+        dtype: float32
+        scale: true
+      - type: ConvertBoxes
+        fmt: cxcywh
+        normalize: true
+      policy:
+        name: stop_epoch
+        epoch: 13
+        ops:
+        - RandomPhotometricDistort
+        - RandomZoomOut
+        - RandomIoUCrop
+  shuffle: true
+  num_workers: 4
+  drop_last: true
+  collate_fn:
+    type: DualBatchImageCollateFunction
+    scales: null
+    stop_epoch: 13
+  total_batch_size: 2
+val_dataloader:
+  type: DataLoader
+  dataset:
+    type: M3FDDetection
+    img_folder: ./datasets/DVTOD dataset/vis1/images/val
+    ir_folder: ./datasets/DVTOD dataset/ir1/images/val
+    ann_file: ./datasets/RTDOD_HBB_3class/annotations/instances_val.json
+    return_masks: false
+    transforms:
+      type: DualCompose
+      ops:
+      - type: Resize
+        size:
+        - 1088
+        - 1920
+      - type: ConvertPILImage
+        dtype: float32
+        scale: true
+  shuffle: false
+  num_workers: 4
+  drop_last: false
+  collate_fn:
+    type: DualBatchImageCollateFunction
+  total_batch_size: 2
+test_dataloader:
+  type: DataLoader
+  dataset:
+    type: M3FDDetection
+    img_folder: ./datasets/DVTOD dataset/vis1/images/val
+    ir_folder: ./datasets/DVTOD dataset/ir1/images/val
+    ann_file: ./datasets/RTDOD_HBB_3class/annotations/instances_val.json
+    transforms:
+      type: DualCompose
+      ops:
+      - type: Resize
+        size:
+        - 1088
+        - 1920
+      - type: ConvertPILImage
+        dtype: float32
+        scale: true
+  collate_fn:
+    type: DualBatchImageCollateFunction
+  total_batch_size: 2
+  num_workers: 4
+  shuffle: false
+  drop_last: false
+print_freq: 100
+output_dir: ./outputs/RSC-DETR/DVTOD
+checkpoint_freq: 1
+sync_bn: true
+find_unused_parameters: false
+use_amp: false
+scaler:
+  type: GradScaler
+  enabled: true
+use_ema: true
+ema:
+  type: ModelEMA
+  decay: 0.9995
+  warmups: 1000
+epoches: 15
+clip_max_norm: 0.1
+optimizer:
+  type: AdamW
+  params:
+  - params: ^(?=.*backbone)(?!.*norm).*$
+    lr: 1.0e-05
+  - params: ^(?=.*(?:encoder|decoder|fusion))(?=.*(?:norm|bn)).*$
+    weight_decay: 0.0
+  lr: 0.0001
+  betas:
+  - 0.9
+  - 0.999
+  weight_decay: 0.0001
+lr_scheduler:
+  type: MultiStepLR
+  milestones:
+  - 13
+  gamma: 0.1
+lr_warmup_scheduler:
+  type: LinearWarmup
+  warmup_duration: 166
+tuning: ./pretrained/rtdetrv2_r50vd_6x_coco_ema_dual.pth
+model: RSCDETR
+criterion: DynamicHarmonizationCriterion
+postprocessor: RTDETRPostProcessor
+use_focal_loss: true
+eval_spatial_size:
+- 1088
+- 1920
+PResNet:
+  depth: 50
+  variant: d
+  freeze_at: 1
+  return_idx:
+  - 1
+  - 2
+  - 3
+  num_stages: 4
+  freeze_norm: true
+  pretrained: true
+HybridEncoder:
+  in_channels:
+  - 512
+  - 1024
+  - 2048
+  feat_strides:
+  - 8
+  - 16
+  - 32
+  hidden_dim: 256
+  use_encoder_idx:
+  - 2
+  num_encoder_layers: 1
+  nhead: 8
+  dim_feedforward: 1024
+  dropout: 0.0
+  enc_act: gelu
+  expansion: 1.0
+  depth_mult: 1
+  act: silu
+RTDETR:
+  backbone: PResNet
+  encoder: HybridEncoder
+  decoder: RTDETRTransformerv2
+RTDETRTransformerv2:
+  feat_channels:
+  - 256
+  - 256
+  - 256
+  feat_strides:
+  - 8
+  - 16
+  - 32
+  hidden_dim: 256
+  num_levels: 3
+  num_layers: 6
+  num_queries: 300
+  num_denoising: 100
+  label_noise_ratio: 0.5
+  box_noise_scale: 1.0
+  eval_idx: -1
+  num_points:
+  - 4
+  - 4
+  - 4
+  cross_attn_method: default
+  query_select_method: default
+RTDETRPostProcessor:
+  num_top_queries: 300
+RTDETRCriterionv2:
+  weight_dict:
+    loss_vfl: 1
+    loss_bbox: 5
+    loss_giou: 2
+  losses:
+  - vfl
+  - boxes
+  alpha: 0.75
+  gamma: 2.0
+  matcher:
+    type: HungarianMatcher
+    weight_dict:
+      cost_class: 2
+      cost_bbox: 5
+      cost_giou: 2
+    alpha: 0.25
+    gamma: 2.0
+RSCDETR:
+  backbone_rgb: PResNet
+  backbone_ir: PResNet
+  fusion: SPSF
+  encoder: HybridEncoder
+  decoder: PFHMDecoder
+MultiScaleConcatFusion:
+  in_channels:
+  - 512
+  - 1024
+  - 2048
+SPSF:
+  in_channels:
+  - 512
+  - 1024
+  - 2048
+  base_ratio: 0.75
+  enabled_scales:
+  - S5
+  alpha_fixed: 0.5
+PFHMDecoder:
+  feat_channels:
+  - 256
+  - 256
+  - 256
+  feat_strides:
+  - 8
+  - 16
+  - 32
+  hidden_dim: 256
+  num_levels: 3
+  num_layers: 6
+  num_queries: 300
+  num_denoising: 100
+  label_noise_ratio: 0.5
+  box_noise_scale: 1.0
+  eval_idx: -1
+  num_points: 4
+  cross_attn_method: default
+  query_select_method: default
+  annotation_file: ./datasets/RTDOD_HBB_3class/annotations/instances_train.json
+  category_ids:
+  - 0
+  - 1
+  - 2
+  x1_num_classes: 3
+  fine_temperature: 8.0
+  fine_learnable_temperature: true
+DynamicHarmonizationCriterion:
+  weight_dict:
+    loss_vfl: 1.1
+    loss_bbox: 5
+    loss_giou: 2
+  losses:
+  - vfl
+  - boxes
+  alpha: 0.75
+  gamma: 2.0
+  class_axis_normalization_power: 0.0
+  quality_target_floor: 0.0
+  final_loss_scale: 1.0
+  log_interval: 500
+  annotation_file: ./datasets/RTDOD_HBB_3class/annotations/instances_train.json
+  category_ids:
+  - 0
+  - 1
+  - 2
+  x1_num_classes: 3
+  total_updates: 12045
+  diagnostics_path: ./outputs/RSC-DETR/DVTOD/dynamic_harmonization_diagnostics.jsonl
+  matcher:
+    type: ACRHMMatcher
+    weight_dict:
+      cost_class: 2
+      cost_bbox: 5
+      cost_giou: 2
+    alpha: 0.25
+    gamma: 2.0
+    ema_momentum: 0.93
+    annotation_file: ./datasets/RTDOD_HBB_3class/annotations/instances_train.json
+    category_ids:
+    - 0
+    - 1
+    - 2
+    total_updates: 12045
+  baseline_matcher:
+    type: HungarianMatcher
+    weight_dict:
+      cost_class: 2
+      cost_bbox: 5
+      cost_giou: 2
+    alpha: 0.25
+    gamma: 2.0
+  balance:
+    type: HarmonizationBalance
+    total_updates: 12045
+    annotation_file: ./datasets/RTDOD_HBB_3class/annotations/instances_train.json
+    category_ids:
+    - 0
+    - 1
+    - 2
+    print_interval: 1000
+    balance_variant: final_harmonization
+seed: 42
+runtime_diagnostics: true
+runtime_diagnostics_interval: 500
+runtime_diagnostics_path: ./outputs/RSC-DETR/DVTOD/runtime_diagnostics.jsonl
+save_last: true
+save_checkpoints: false
+save_best: true
+disable_eval: false
+gradient_accumulation_steps: 1
