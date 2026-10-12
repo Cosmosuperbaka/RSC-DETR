@@ -54,8 +54,11 @@ runs:
     dataset: vedai
     method: "RT-DETR concat baseline"
     seed: 3407
-    config: "rtdetrv2_pytorch/configs/rtdetrv2/rtdetrv2_r50vd_vedai_1024_concat_baseline_seed3407_30e.yml"
-    weights: "results/VEDAI/baseline-s3407-10fold/baseline-fold1/best.pth"
+    config: "rtdetrv2_pytorch/configs/rtdetrv2/rtdetrv2_r50vd_vedai_1024_concat_baseline.yml"
+    # the registry previously recorded .../baseline-s3407-10fold/baseline-fold1/best.pth,
+    # but that directory is empty on the server — the concat-baseline 10-fold
+    # checkpoints live under baseline-10fold/ (fold-1 best epoch AP 56.71)
+    weights: "results/VEDAI/baseline-10fold/baseline-fold1/best.pth"
     log: TODO
     metrics:
       AP: TODO
