@@ -1,0 +1,33 @@
+{
+  "date": "2026-10-12T12:37:23.954493+00:00",
+  "config": "configs/RSC-DETR_VEDAI.yml",
+  "config_sha256": "2d4fe684f9af59e2a7a9eab7fa4838c399ab1504f04c6ddf351a87d8394f7973",
+  "weights": "weights/vedai_rscdetr_fold01_s3407_1024_eval.pth",
+  "weights_sha256": "d4f31f19a617108998cfbf19e44df1a30842b9e3294f3d92683992f5e2a64efe",
+  "ann_file": "./datasets/VEDAI/annotations/vedai_fold01_test_class8.json",
+  "ann_file_sha256": "52a34a2eae50faa8b9520b590edae5a0954a0e3435216790a0b9b8646542eb29",
+  "img_folder": "./datasets/VEDAI/Vehicules1024",
+  "metrics": {
+    "AP": 59.311,
+    "AP50": 88.536,
+    "AP75": 71.467,
+    "APs": 51.276,
+    "APm": 62.113,
+    "APl": 89.196,
+    "AR@1": 47.96,
+    "AR@10": 72.626,
+    "AR@100": 74.659,
+    "ARs": 73.636,
+    "ARm": 75.341,
+    "ARl": 97.5
+  },
+  "environment": {
+    "python": "3.10.20",
+    "torch": "2.1.2+cu121",
+    "torchvision": "0.16.2+cu121",
+    "cuda": "12.1",
+    "cudnn": 8902,
+    "gpu": "NVIDIA GeForce RTX 4090"
+  },
+  "protocol": "DetSolver.val() path; EMA module evaluated; see docs/BENCHMARK_PROTOCOL.md for timing (not used here)"
+}

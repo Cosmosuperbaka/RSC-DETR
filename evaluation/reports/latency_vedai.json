@@ -1,0 +1,33 @@
+{
+  "model": "RSC-DETR_VEDAI",
+  "weights": "/home/denglingjun/rsc-detr-github/weights/vedai_rscdetr_fold01_s3407_1024_eval.pth",
+  "gpu": {
+    "name": "NVIDIA GeForce RTX 4090",
+    "driver": null,
+    "sm_clock_mhz": 210,
+    "util_before_pct": 0,
+    "memory_used_mib": 4
+  },
+  "precision": "fp32",
+  "batch_size": 1,
+  "resolution": [
+    1024,
+    1024
+  ],
+  "warmup_iters": 50,
+  "timed_iters": 200,
+  "torch": "2.1.2+cu121",
+  "cudnn": 8902,
+  "timestamp": "2026-10-12T05:19:06",
+  "latency_ms": {
+    "median": 35.3010039543733,
+    "mean": 35.3850584483007,
+    "p10": 35.14968592207879,
+    "p90": 35.66431789658964,
+    "min": 35.069657023996115,
+    "max": 38.37884694803506
+  },
+  "throughput_fps": 28.327806237253316,
+  "peak_memory_mib": 793.57666015625,
+  "n_timed": 200
+}

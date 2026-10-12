@@ -1,0 +1,13 @@
+{
+  "method": "rscdetr",
+  "weights": "weights/vedai_rscdetr_fold01_s3407_1024_eval.pth",
+  "resolution": [
+    1024,
+    1024
+  ],
+  "params": 90109332,
+  "params_M": 90.109,
+  "gflops": 747.06,
+  "latency_ms": 36.57,
+  "fps": 27.3
+}

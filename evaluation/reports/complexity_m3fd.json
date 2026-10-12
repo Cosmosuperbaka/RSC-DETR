@@ -1,0 +1,13 @@
+{
+  "method": "rscdetr",
+  "weights": "weights/m3fd_lt20_rscdetr_s42_b8_1024_eval.pth",
+  "resolution": [
+    1024,
+    1024
+  ],
+  "params": 90102655,
+  "params_M": 90.103,
+  "gflops": 747.03,
+  "latency_ms": 37.59,
+  "fps": 26.6
+}

@@ -1,0 +1,33 @@
+{
+  "model": "RSC-DETR_M3FD-LT20",
+  "weights": "/home/denglingjun/rsc-detr-github/weights/m3fd_lt20_rscdetr_s42_b8_1024_eval.pth",
+  "gpu": {
+    "name": "NVIDIA GeForce RTX 4090",
+    "driver": null,
+    "sm_clock_mhz": 2520,
+    "util_before_pct": 0,
+    "memory_used_mib": 4
+  },
+  "precision": "fp32",
+  "batch_size": 1,
+  "resolution": [
+    1024,
+    1024
+  ],
+  "warmup_iters": 50,
+  "timed_iters": 200,
+  "torch": "2.1.2+cu121",
+  "cudnn": 8902,
+  "timestamp": "2026-10-12T05:19:34",
+  "latency_ms": {
+    "median": 37.69869095413014,
+    "mean": 39.88860024954192,
+    "p10": 36.64081601891667,
+    "p90": 46.76695098169148,
+    "min": 36.183914984576404,
+    "max": 72.48640502803028
+  },
+  "throughput_fps": 26.52611999755507,
+  "peak_memory_mib": 793.20263671875,
+  "n_timed": 200
+}

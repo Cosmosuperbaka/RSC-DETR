@@ -30,6 +30,16 @@ Reported results (AP, %):
 The RT-DETR concat baseline is improved by +1.78 / +0.88 / +0.40 AP points on the
 three datasets respectively.
 
+Post-hoc measurements recorded in this repository (FP32, batch 1, idle RTX 4090,
+protocol in [docs/BENCHMARK_PROTOCOL.md](docs/BENCHMARK_PROTOCOL.md)) — see
+[evaluation/reports/](evaluation/reports/):
+
+| Dataset | Resolution | Params (M) | GFLOPs | Latency median |
+|---|---|---|---|---|
+| VEDAI | 1024×1024 | 90.11 | 747.1 | 35.3 ms |
+| M3FD-LT20 | 1024×1024 | 90.10 | 747.0 | 37.7 ms |
+| DVTOD | 1088×1920 | 90.10 | 1485.5 | 61.3 ms |
+
 ---
 
 ## Repository layout

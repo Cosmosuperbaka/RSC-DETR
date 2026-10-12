@@ -1,0 +1,13 @@
+{
+  "method": "rscdetr",
+  "weights": "weights/dvtod_rscdetr_s42_1920_eval.pth",
+  "resolution": [
+    1088,
+    1920
+  ],
+  "params": 90095722,
+  "params_M": 90.096,
+  "gflops": 1485.48,
+  "latency_ms": 60.92,
+  "fps": 16.4
+}

@@ -78,6 +78,9 @@ runs:
       AP: 59.31         # re-eval of the released EMA weights: 59.311
       AP50: 88.54       # re-eval: 88.536
       AP75: 71.47       # re-eval: 71.467
+      params_M: 90.109  # evaluation/reports/complexity_vedai.json @1024x1024
+      gflops: 747.06
+      latency_ms: 35.30 # median, FP32 batch 1, idle RTX 4090 (latency_vedai.json)
     hashes:
       config: TODO
       weights: d4f31f19a617108998cfbf19e44df1a30842b9e3294f3d92683992f5e2a64efe   # LFS copy, server==client verified 2026-10-12
@@ -121,6 +124,9 @@ runs:
       AP: 55.90         # re-eval of the released EMA weights: 55.897
       AP50: 84.09       # re-eval: 84.088
       AP75: 60.51       # re-eval: 60.507
+      params_M: 90.103  # evaluation/reports/complexity_m3fd.json @1024x1024
+      gflops: 747.03
+      latency_ms: 37.70 # median, FP32 batch 1, idle RTX 4090 (latency_m3fd.json)
     hashes:
       config: TODO
       weights: e4f3e021bcbeff33c35f6541c762cb94e37aef408db85dfe1cd168efd10ed307   # LFS copy, server==client verified 2026-10-10
@@ -152,9 +158,12 @@ runs:
     # the log's [eval_per_class_test] resume= line names the checkpoint above;
     # predictions live in result/RTDOD_HBB_3class/perclass_sh_c2_best/
     metrics:
-      AP: 56.66         # per-class means: 56.664
+      AP: 56.66         # per-class means: 56.664; re-eval 56.663 (dvtod_reeval.json)
       AP50: 89.50       # 89.495
       AP75: 61.21       # 61.212
+      params_M: 90.096  # evaluation/reports/complexity_dvtod.json @1088x1920
+      gflops: 1485.48
+      latency_ms: 61.33 # median, FP32 batch 1, idle RTX 4090 (latency_dvtod.json)
     hashes:
       config: c2c51709cd61d593778db21036c2344267adda0d7ee8538d3d3d39edf7a59b7d   # configs/RSC-DETR_DVTOD.yml
       weights: 04acfa9296594e3f92b31a4fad7873c363f72a43eae31931440d255a6443e2f7   # LFS copy, server==client verified 2026-10-10
@@ -177,7 +186,11 @@ pending:
     status: blocked_on_compute
 
   - id: latency
-    reason: "no timing has been measured under a controlled protocol"
+    reason: "resolved 2026-10-12: recorded on an idle RTX 4090 per the protocol"
     protocol: docs/BENCHMARK_PROTOCOL.md
     script: benchmark/benchmark_latency.py
-    status: blocked_on_compute
+    reports:
+      - evaluation/reports/latency_vedai.json
+      - evaluation/reports/latency_m3fd.json
+      - evaluation/reports/latency_dvtod.json
+    status: complete

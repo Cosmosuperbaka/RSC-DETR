@@ -1,0 +1,33 @@
+{
+  "date": "2026-10-12T12:38:37.634612+00:00",
+  "config": "configs/RSC-DETR_DVTOD.yml",
+  "config_sha256": "c2c51709cd61d593778db21036c2344267adda0d7ee8538d3d3d39edf7a59b7d",
+  "weights": "weights/dvtod_rscdetr_s42_1920_eval.pth",
+  "weights_sha256": "04acfa9296594e3f92b31a4fad7873c363f72a43eae31931440d255a6443e2f7",
+  "ann_file": "./datasets/RTDOD_HBB_3class/annotations/instances_val.json",
+  "ann_file_sha256": "308ca724b90cec808fe9c54a21d04bbbe0ba17396d902ed78bf7033813f9470d",
+  "img_folder": "./datasets/DVTOD dataset/vis1/images/val",
+  "metrics": {
+    "AP": 56.663,
+    "AP50": 89.491,
+    "AP75": 61.21,
+    "APs": 23.509,
+    "APm": 31.301,
+    "APl": 60.441,
+    "AR@1": 34.568,
+    "AR@10": 64.973,
+    "AR@100": 71.764,
+    "ARs": 39.322,
+    "ARm": 57.927,
+    "ARl": 74.59
+  },
+  "environment": {
+    "python": "3.10.20",
+    "torch": "2.1.2+cu121",
+    "torchvision": "0.16.2+cu121",
+    "cuda": "12.1",
+    "cudnn": 8902,
+    "gpu": "NVIDIA GeForce RTX 4090"
+  },
+  "protocol": "DetSolver.val() path; EMA module evaluated; see docs/BENCHMARK_PROTOCOL.md for timing (not used here)"
+}

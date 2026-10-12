@@ -1,0 +1,33 @@
+{
+  "model": "RSC-DETR_DVTOD",
+  "weights": "/home/denglingjun/rsc-detr-github/weights/dvtod_rscdetr_s42_1920_eval.pth",
+  "gpu": {
+    "name": "NVIDIA GeForce RTX 4090",
+    "driver": null,
+    "sm_clock_mhz": 2730,
+    "util_before_pct": 0,
+    "memory_used_mib": 4
+  },
+  "precision": "fp32",
+  "batch_size": 1,
+  "resolution": [
+    1088,
+    1920
+  ],
+  "warmup_iters": 50,
+  "timed_iters": 200,
+  "torch": "2.1.2+cu121",
+  "cudnn": 8902,
+  "timestamp": "2026-10-12T05:20:06",
+  "latency_ms": {
+    "median": 61.33169349050149,
+    "mean": 62.3800509161083,
+    "p10": 60.63538498710841,
+    "p90": 64.23015100881457,
+    "min": 60.392978019081056,
+    "max": 92.62217790819705
+  },
+  "throughput_fps": 16.304783760045222,
+  "peak_memory_mib": 1224.685546875,
+  "n_timed": 200
+}
