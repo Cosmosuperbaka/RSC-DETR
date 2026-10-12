@@ -116,7 +116,7 @@ def build_yolov5_dual(weights, imgsz,
 
 # ---------------------------------------------------------------- RT-DETR
 def build_rtdetr(config, weights, repo=f"{ROOT}/rtdetrv2_pytorch",
-                 device="cuda:0"):
+                 device="cuda:0", fallback_size=None):
     sys.path.insert(0, repo)
     os.chdir(repo)
     from src.core import YAMLConfig
@@ -132,7 +132,9 @@ def build_rtdetr(config, weights, repo=f"{ROOT}/rtdetrv2_pytorch",
             params = state
         model.load_state_dict(params, strict=False)
     model = model.to(device)
-    size = cfg.yaml_cfg.get("eval_spatial_size") or [640, 640]
+    # configs with a fixed eval size (VEDAI, DVTOD) use it; native-resolution
+    # configs (M3FD, eval_spatial_size: null) fall back to the protocol size
+    size = cfg.yaml_cfg.get("eval_spatial_size") or fallback_size or [640, 640]
     h, w = int(size[0]), int(size[1])
     samples = {
         "rgb": torch.randn(1, 3, h, w, device=device),
@@ -170,7 +172,9 @@ def main():
             args.weights, args.imgsz, repo=args.repo or default_repo)
         res = [args.imgsz, args.imgsz]
     else:
-        net, run, n_params, res = build_rtdetr(args.config, args.weights, repo=args.repo)
+        net, run, n_params, res = build_rtdetr(
+            args.config, args.weights, repo=args.repo or str(ROOT),
+            fallback_size=[args.imgsz, args.imgsz])
         run()
 
     gflops = _flops(run, None) / 1e9

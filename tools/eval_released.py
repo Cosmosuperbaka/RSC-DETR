@@ -69,7 +69,12 @@ def main() -> int:
         # optional split override; kept explicit in the report
         cfg.yaml_cfg["val_dataloader"]["dataset"]["ann_file"] = args.ann_file
 
+    # BaseSolver.__init__ only stores the config; eval() performs the lazy
+    # setup (model, EMA, criterion, dataloaders) and prefers test_dataloader
+    # over val_dataloader when the config defines one — this mirrors what
+    # `tools/train.py --test-only` executes.
     solver = TASKS[cfg.yaml_cfg["task"]](cfg)
+    solver.eval()
     solver.load_resume_state(str(args.weights))
 
     module = solver.ema.module if getattr(solver, "ema", None) else solver.model
@@ -85,7 +90,7 @@ def main() -> int:
     metrics = {k: (None if v is None else round(100.0 * v, 3))
                for k, v in zip(keys, vector)}
 
-    ann_file = cfg.yaml_cfg["val_dataloader"]["dataset"]["ann_file"]
+    ann_file = solver.val_dataloader.dataset.ann_file
     report = {
         "date": datetime.now(timezone.utc).isoformat(),
         "config": str(args.config),
