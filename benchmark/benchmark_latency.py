@@ -68,7 +68,7 @@ def gpu_state(index: int) -> dict:
 def build_model(config_path: Path, weights_path: Path, device: str):
     """Instantiate the detector exactly as training does."""
     import torch
-    from rdetrv2_pytorch.src.core import YAMLConfig, yaml_utils  # noqa: F401
+    from src.core import YAMLConfig, yaml_utils  # noqa: F401
 
     update = yaml_utils.parse_cli([])
     update.update({"resume": str(weights_path), "device": device})
