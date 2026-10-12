@@ -63,6 +63,10 @@ def main() -> int:
     update = {}
     if args.device:
         update["device"] = args.device
+    # the released checkpoint overwrites every parameter, so the COCO
+    # pre-training init in the config's `tuning:` entry is skipped — it is
+    # only needed when fine-tuning, not when scoring a released weight
+    update["tuning"] = None
     cfg = YAMLConfig(str(args.config), **update)
 
     if args.ann_file:
@@ -76,6 +80,20 @@ def main() -> int:
     solver = TASKS[cfg.yaml_cfg["task"]](cfg)
     solver.eval()
     solver.load_resume_state(str(args.weights))
+
+    # DetSolver.val scores the EMA module. A stripped eval checkpoint stores
+    # those weights under the "model" key (no "ema" entry), so load_resume_state
+    # only refreshed solver.model — push them into the EMA module explicitly.
+    # A full training checkpoint keeps its "ema" entry and needs nothing here.
+    state = torch.load(str(args.weights), map_location="cpu")
+    has_ema_entry = (isinstance(state, dict) and isinstance(state.get("ema"), dict)
+                     and "module" in state["ema"])
+    if not has_ema_entry and isinstance(state, dict) and "model" in state:
+        target = (solver.ema.module if getattr(solver, "ema", None) is not None
+                  else dist_utils.de_parallel(solver.model))
+        missing, unexpected = target.load_state_dict(state["model"], strict=True)
+        print(f"[eval_released] EMA module <- checkpoint['model'] "
+              f"(missing={len(missing)}, unexpected={len(unexpected)})", flush=True)
 
     module = solver.ema.module if getattr(solver, "ema", None) else solver.model
     test_stats, _coco_evaluator = evaluate(
