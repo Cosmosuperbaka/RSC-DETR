@@ -30,7 +30,8 @@ figures/out/
 *.log
 
 # Datasets: ignore the data entities, keep the preparation README
-data/
+# (anchored to the repo root so src/data/ — the dataloader sources — stays tracked)
+/data/
 datasets/*
 !datasets/README.md
 
