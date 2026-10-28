@@ -1,0 +1,23 @@
+{
+  "algorithm": "SHA-256 exact-file deduplication; keep priority val > test > train, then lexical stem",
+  "scope": "RGB and IR checked independently across and within all three subsets; remove entire lower-priority pair on either-modality collision",
+  "removed_samples": [
+    {
+      "stem": "00539",
+      "split": "test",
+      "reason": "byte_identical_ir",
+      "kept_duplicates": [
+        {
+          "modality": "ir",
+          "split": "val",
+          "stem": "01300"
+        }
+      ],
+      "rgb_sha256": "ae60c689dd42963d5a33a2e979126c9b86ecde3b1f8198a46d4578db81cb4795",
+      "ir_sha256": "55d24efe09e7456a60361d908c3307475edc68f45a07bbb819213b70d3c1ff78",
+      "pair_sha256": "db9b01b8406d06406a085cd22385c5f27968397d27e1dbbf7a1f2cb3ba2696fc",
+      "annotation_count": 14
+    }
+  ],
+  "removed_pair_count": 1
+}

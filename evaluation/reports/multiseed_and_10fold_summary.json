@@ -1,12 +1,13 @@
 {
-  "date": "2026-10-14T16:30:03.039365+00:00",
+  "date": "2026-10-28",
+  "note": "Authoritative multi-seed and 10-fold summary. All AP values are percentages. Training seeds are independent of data-split seeds; every M3FD-LT20 run uses the fixed lt20_seed42 split.",
   "vedai_10fold_rscdetr": {
-    "note": "best-epoch test AP per fold; fold01 = headline re-eval, fold02/04 re-evaluated 2026-10-14",
+    "protocol": "Official VEDAI folds 1-10; each fold's val_dataloader points at that fold's held-out test annotation; best-epoch AP. Fold 1 is the batch-4 re-evaluation of the released checkpoint.",
     "per_fold_AP": {
       "1": 59.311,
-      "2": 52.2,
+      "2": 52.167,
       "3": 58.101,
-      "4": 55.0,
+      "4": 55.022,
       "5": 53.945,
       "6": 56.127,
       "7": 55.504,
@@ -14,9 +15,33 @@
       "9": 57.96,
       "10": 57.026
     },
-    "mean_AP": 56.42,
-    "std_AP": 2.3,
-    "n": 10
+    "mean_AP": 56.419,
+    "std_AP": 2.305,
+    "n": 10,
+    "source": [
+      "results/VEDAI/v19c-spsf-s3407-10fold/fold02..fold10/log.txt",
+      "result/VEDAI/test-x1x3-v19c-spsf_seed3407/valbest_test_perclass/per_class.json (fold 1)"
+    ]
+  },
+  "vedai_10fold_baseline": {
+    "protocol": "RT-DETR concat baseline, same official folds and best-epoch rule.",
+    "per_fold_AP": {
+      "1": 56.71,
+      "2": 53.01,
+      "3": 57.14,
+      "4": 58.376,
+      "5": 53.288,
+      "6": 55.453,
+      "7": 55.31,
+      "8": 58.088,
+      "9": 58.768,
+      "10": 56.503
+    },
+    "mean_AP": 56.265,
+    "std_AP": 2.003,
+    "n": 10,
+    "source": "evaluation/reports/vedai_10fold_summary.json",
+    "note": "Separate ten-fold repeat of the concat config; fold-1 AP 56.71, not the main-table concat run (57.53). The paired comparison measures run-to-run variability under a common protocol."
   },
   "multiseed": {
     "vedai": {
@@ -25,19 +50,48 @@
         "42": 58.037,
         "2024": 55.82
       },
-      "mean": 57.723,
-      "std": 1.767,
-      "split": "fold01 test"
+      "mean_AP": 57.723,
+      "std_AP": 1.767,
+      "n": 3,
+      "split": "VEDAI official fold-1 test",
+      "protocol": "Best checkpoint per training seed; val_dataloader is the fold-1 test annotation; batch 4. Seed-3407 value is the released-checkpoint re-evaluation.",
+      "source": [
+        "result/VEDAI/test-x1x3-v19c-spsf_seed3407/valbest_test_perclass/per_class.json",
+        "results/VEDAI/v19c-spsf-s3407-multiseed/seed42/log.txt",
+        "results/VEDAI/v19c-spsf-s3407-multiseed/seed2024/log.txt"
+      ]
     },
     "m3fd": {
-      "seeds": {
-        "42": 55.897,
-        "3407": 55.471,
-        "2024": 54.878
+      "rsc_detr": {
+        "seeds": {
+          "42": 55.945,
+          "3407": 55.833,
+          "2024": 55.09
+        },
+        "mean_AP": 55.623,
+        "std_AP": 0.464,
+        "n": 3
       },
-      "mean": 55.415,
-      "std": 0.512,
-      "split": "test (seed42 = frozen 55.90 re-eval)"
+      "concat": {
+        "seeds": {
+          "42": 55.051,
+          "3407": 55.772,
+          "2024": 55.07
+        },
+        "mean_AP": 55.298,
+        "std_AP": 0.411,
+        "n": 3
+      },
+      "split": "M3FD-LT20 final 419-pair test (lt20_seed42 data split)",
+      "protocol": "Uniform clean re-evaluation of each best checkpoint with tools/eval_per_class_test.py, batch 8, instances_test.json; all three training seeds use the same fixed split.",
+      "source": [
+        "experiments_20261024/predictions/clean_RSC_DETR_s42/per_class.json",
+        "experiments_20261024/predictions/clean_RSC_DETR_s3407/per_class.json",
+        "experiments_20261024/predictions/clean_RSC_DETR_s2024/per_class.json",
+        "experiments_20261024/predictions/clean_Concat_s42/per_class.json",
+        "experiments_20261024/predictions/clean_Concat_s3407/per_class.json",
+        "experiments_20261024/predictions/clean_Concat_s2024/per_class.json"
+      ]
     },
     "dvtod": {
       "seeds": {
@@ -45,9 +99,24 @@
         "3407": 54.96,
         "2024": 54.739
       },
-      "mean": 55.454,
-      "std": 1.053,
-      "split": "validation (no test split)"
+      "mean_AP": 55.454,
+      "std_AP": 1.053,
+      "n": 3,
+      "split": "DVTOD validation (no independent test split)",
+      "protocol": "Best validation checkpoint per training seed.",
+      "source": "result/RTDOD_HBB_3class/shdetr_c2_1920_b2_15e_seed{42,3407,2024}/ and per-class logs"
+    }
+  },
+  "superseded": {
+    "m3fd_old_values": {
+      "seeds": {
+        "42": 55.897,
+        "3407": 55.471,
+        "2024": 54.878
+      },
+      "mean_AP": 55.415,
+      "std_AP": 0.512,
+      "reason": "The 42/3407/2024 values mix the batch-4 headline re-evaluation with per-run training-log test_set_stats at the final epoch. They are not a uniform best-checkpoint comparison and are superseded by the batch-8 clean re-evaluation above. The seed-42 55.897 remains the manuscript headline (55.90) and is valid for the final 419-pair test set."
     }
   }
 }

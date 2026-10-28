@@ -14,13 +14,20 @@
 #   unresolved  - the number itself is in doubt, see docs/REPRODUCIBILITY.md
 
 schema_version: 1
-last_updated: "2026-10-12"
+last_updated: "2026-10-28"
 
 # --------------------------------------------------------------------------
 # Conventions
 # --------------------------------------------------------------------------
 # paths are relative to RSCDETR_ROOT unless prefixed with ~
 # every metric must name the script and the split that produced it
+#
+# IMPORTANT: the `seed` field on a run is the MODEL-TRAINING seed (`--seed`).
+# Dataset sampling seeds are a different quantity and are recorded under
+# datasets.<name>.data_split_seeds. For M3FD-LT20 the data split is fixed at
+# lt20_seed42 for every training seed; run names such as seed3407/seed2024 are
+# training-seed variants, not different data splits. VEDAI run names s3407 and
+# seed3407 are also training seeds on the official fold-1 split.
 # --------------------------------------------------------------------------
 
 datasets:
@@ -29,15 +36,22 @@ datasets:
     version: "Vehicules1024, 8-class"
     annotation: "VEDAI/annotations/vedai_fold01_test_class8.json"
     split: "official fold 1 for the headline table; folds 1-10 for the 10-fold summary"
-    image_count: {train: TODO, val: TODO, test: TODO}
+    image_count: {train: 1089, val: 121, test: 121}
     input_size: 1024
+    note: "Fold 1 has 1089 training and 121 held-out images; the held-out partition is used for both model selection and final evaluation."
 
   m3fd_lt20:
-    version: "M3FD long-tailed, seed 42, 6-class"
-    annotation: "M3FD/processed/lt20_seed42/annotations/instances_test.json"
-    split: {train: TODO, val: TODO, test: TODO}
+    version: "M3FD long-tailed, fixed data-split seed 42 (lt20_seed42), 6-class"
+    annotation: "M3FD/reproducibility/splits/ (fixed lists); generated COCO at M3FD/processed/lt20_seed42/annotations/instances_test.json"
+    split: {train: 1428, val: 420, test: 419}
+    data_split_seeds: {base_validation: 42, base_test: 1042, long_tail_train: 42}
     input_size: 1024
-    note: "a de-duplicated test variant circulated at some point; see the open item in docs/REPRODUCIBILITY.md"
+    note: >
+      The fixed lists, construction scripts, manifest, and dedupe report are in
+      datasets/M3FD/reproducibility/. Test 00539 is removed because its IR file
+      is byte-identical to validation 01300 (14 annotations); 419 is the final
+      test size. Byte-level dedupe does not prove scene-level isolation.
+      Training seeds 42 / 3407 / 2024 all use this same fixed split.
 
   dvtod:
     version: "RTDOD_HBB_3class (Person / Car / Bicycle)"
@@ -70,7 +84,7 @@ runs:
   - id: vedai-rscdetr-fold01
     dataset: vedai
     method: "RSC-DETR"
-    seed: 3407
+    seed: 3407              # model-training seed; split is the official fold 1
     config: "rtdetrv2_pytorch/configs/rtdetrv2/rtdetrv2_r50vd_vedai_1024_test-x1x3-v19c-spsf_seed3407_30e.yml"
     # headline fold-1 run; config name recorded by valbest_test.log
     # (the registry previously used the ..._fold01_30e.yml spelling)
@@ -118,13 +132,14 @@ runs:
   - id: m3fd-rscdetr
     dataset: m3fd_lt20
     method: "RSC-DETR"
-    seed: 42
+    seed: 42                    # model-training seed; data split is fixed lt20_seed42
+    data_split_seed: 42         # dataset-construction seed; not a training seed
     config: "rtdetrv2_pytorch/configs/rtdetrv2/rtdetrv2_r50vd_m3fd_lt20_seed42_x1x3_v19c_spsf_native_res_b8_45e.yml"
     weights: "~/re-detr-last/ablations/rtdetr-x1x3-v19c-spsf-native-res-b8-45e_M3FD-LT20_b8-45e/best_M3FD-LT20_b8-45e.pth"
     lfs_release: "weights/m3fd_lt20_rscdetr_s42_b8_1024_eval.pth"
     log: "~/re-detr-last/ablations/rtdetr-x1x3-v19c-spsf-native-res-b8-45e_M3FD-LT20_b8-45e/log.txt"
     metrics:
-      AP: 55.90         # re-eval of the released EMA weights: 55.897
+      AP: 55.90         # batch-4 re-eval of released EMA weights on final 419 test: 55.897
       AP50: 84.09       # re-eval: 84.088
       AP75: 60.51       # re-eval: 60.507
       params_M: 90.103  # evaluation/reports/complexity_m3fd.json @1024x1024
@@ -136,13 +151,14 @@ runs:
       predictions: TODO
     status: partial
     note: >
-      Resolved 2026-10-12. The re-evaluation of the released checkpoint on the
-      standard test split exists at
-      outputs/m3fd_lt20_s42_b8_valbest_test_requested/v19c_spsf/
-      (per_class.json; 6-class means AP 55.897 / AP50 84.088 / AP75 60.507)
-      and matches the manuscript value 55.90, which is therefore frozen.
-      The 55.95 figure traces to a re-evaluation on a de-duplicated test
-      variant and is NOT the manuscript number; see docs/REPRODUCIBILITY.md.
+      Headline number. The final test set has 419 pairs (test 00539 removed).
+      The released predictions contain no detection for 00539; evaluating them
+      against the 420-pair pre-dedupe GT or the 419-pair final GT both give
+      AP 55.9 at batch 4. Under the uniform batch-8 suite used for multi-seed
+      comparison, the same checkpoint gives AP 55.945; the 0.05 difference is
+      batching/padding numerics. Multi-seed mean ± std (42/3407/2024, final
+      419 test, uniform batch 8): 55.62 ± 0.46; concat baseline 55.30 ± 0.41.
+      Split protocol: datasets/M3FD/reproducibility/README.md.
 
   - id: dvtod-rscdetr
     dataset: dvtod
@@ -178,15 +194,29 @@ runs:
       per_class.json, which match the manuscript (56.66 / 89.49 / 61.21).
 
 # --------------------------------------------------------------------------
-# Multi-seed runs -- not yet executed
+# Multi-seed and 10-fold results -- completed 2026-10-14
 # --------------------------------------------------------------------------
-pending:
+completed:
   - id: multiseed
-    reason: "no reported number has an error bar yet"
     plan: docs/MULTISEED_PLAN.md
     seeds: [3407, 42, 2024]
     datasets: [vedai, m3fd_lt20, dvtod]
-    status: blocked_on_compute
+    protocol: "training-seed repeats on fixed data splits; best checkpoint per run"
+    results:
+      vedai_fold01_test: {mean_AP: 57.723, std_AP: 1.767, n: 3}
+      m3fd_lt20_final_test: {mean_AP: 55.623, std_AP: 0.464, n: 3}
+      dvtod_val: {mean_AP: 55.454, std_AP: 1.053, n: 3}
+    report: evaluation/reports/multiseed_and_10fold_summary.json
+    status: complete
+
+  - id: vedai-10fold
+    seeds: [3407]
+    protocol: "official VEDAI folds 1-10; val_dataloader of each fold points at that fold's held-out test annotation; best-epoch AP"
+    results:
+      rsc_detr: {mean_AP: 56.419, std_AP: 2.305, n: 10}
+      concat_baseline: {mean_AP: 56.265, std_AP: 2.003, n: 10}
+    report: evaluation/reports/vedai_10fold_summary.json
+    status: complete
 
   - id: latency
     reason: "resolved 2026-10-12: recorded on an idle RTX 4090 per the protocol"

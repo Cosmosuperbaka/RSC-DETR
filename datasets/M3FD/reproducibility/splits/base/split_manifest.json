@@ -1,0 +1,85 @@
+{
+  "splits": {
+    "train": {
+      "num_images": 3359,
+      "instance_counts": {
+        "0": 9172,
+        "1": 13540,
+        "2": 499,
+        "3": 1853,
+        "4": 407,
+        "5": 708
+      },
+      "image_counts": {
+        "0": 2241,
+        "1": 2292,
+        "2": 452,
+        "3": 645,
+        "4": 335,
+        "5": 474
+      },
+      "sha256": "f2d813d6cde42447add15fbf20604e2ca779a165ed1eacfb1de1d58cf72ced38"
+    },
+    "val": {
+      "num_images": 420,
+      "instance_counts": {
+        "0": 1175,
+        "1": 2403,
+        "2": 92,
+        "3": 255,
+        "4": 58,
+        "5": 136
+      },
+      "image_counts": {
+        "0": 341,
+        "1": 348,
+        "2": 62,
+        "3": 81,
+        "4": 44,
+        "5": 76
+      },
+      "sha256": "03ccf6f572d26fa3df88fcaea5196aeef2bcce7ae6ea6d55564a1759ad44258f"
+    },
+    "test": {
+      "num_images": 420,
+      "instance_counts": {
+        "0": 1130,
+        "1": 2353,
+        "2": 109,
+        "3": 297,
+        "4": 56,
+        "5": 164
+      },
+      "image_counts": {
+        "0": 338,
+        "1": 344,
+        "2": 75,
+        "3": 84,
+        "4": 43,
+        "5": 82
+      },
+      "sha256": "99897ac5717469349b673a644353b0c8d8c02579c367f3a73f9766ca73cfccd6"
+    }
+  },
+  "classes": {
+    "0": "People",
+    "1": "Car",
+    "2": "Bus",
+    "3": "Lamp",
+    "4": "Motorcycle",
+    "5": "Truck"
+  },
+  "extra": {
+    "source_train_txt_found_but_not_used": null,
+    "source_val_txt_found_but_not_used": null,
+    "source_train_count_used": 0,
+    "source_val_count_used": 0,
+    "split_source": "project_generated_fixed_seed_image_level_split",
+    "internal_val_algorithm": "deterministic greedy image-level multilabel stratification",
+    "seed": 42,
+    "test_seed": 1042,
+    "source_checksums": {},
+    "val_ratio_from_base_train": 0.1,
+    "protocol_note": "Project-generated fixed greedy multilabel-stratified base split; not an official M3FD split. Base test has 420 pairs before the final IR duplicate repair."
+  }
+}

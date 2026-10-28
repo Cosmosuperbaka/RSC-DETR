@@ -27,8 +27,42 @@ Reported results (AP, %):
 | M3FD-LT20 | 1024 | **55.90** | — | — | — | — |
 | DVTOD | 1920 | **56.66** | 89.49 | 61.21 | 90.10 | 1485.5 |
 
-The RT-DETR concat baseline is improved by +1.78 / +0.88 / +0.40 AP points on the
-three datasets respectively.
+The single-run RT-DETR concat baseline is improved by +1.78 / +0.88 / +0.40 AP
+points on the three datasets respectively.
+
+**Protocol variability (recorded in this repository).** The headline AP of
+59.31 is a single fold-1 run, and 55.90 is a single training seed; neither is a
+cross-fold or cross-seed estimate. The complete runs give:
+
+| Dataset | Protocol | AP |
+|---|---|---:|
+| VEDAI | official fold 1, training seed 3407 (headline) | 59.31 |
+| VEDAI | all 10 official folds, training seed 3407 | **56.42 ± 2.30** |
+| VEDAI | fold 1, training seeds 42 / 3407 / 2024 | 57.72 ± 1.77 |
+| VEDAI | RT-DETR concat, all 10 official folds | 56.26 ± 2.00 |
+| M3FD-LT20 | final 419-pair test, training seed 42 (headline) | 55.90 |
+| M3FD-LT20 | final 419-pair test, training seeds 42 / 3407 / 2024 | **55.62 ± 0.46** |
+| M3FD-LT20 | RT-DETR concat, same three training seeds | 55.30 ± 0.41 |
+| DVTOD | validation, training seed 42 (headline) | 56.66 |
+| DVTOD | validation, training seeds 42 / 3407 / 2024 | 55.45 ± 1.05 |
+
+The ten-fold result is the more robust VEDAI estimate. RSC-DETR improves on 7
+of 10 folds, with a mean paired gain of +0.16 AP (paired SD 1.57) over the
+concat baseline; the +2.60 AP fold-1 gain is the largest of the ten. The
+baseline row in the 10-fold summary is a separate repeat of the concat config
+(fold-1 AP 56.71), not the main-table concat run (57.53); the paired ten-fold
+comparison is therefore a run-to-run variability study, not a re-use of the
+main-table baseline. On M3FD-LT20 the three-seed gain is +0.32 AP, smaller than
+the single-seed +0.88 AP headline.
+The underlying per-fold and per-seed records are in
+[`evaluation/reports/multiseed_and_10fold_summary.json`](evaluation/reports/multiseed_and_10fold_summary.json)
+and [`evaluation/reports/vedai_10fold_summary.json`](evaluation/reports/vedai_10fold_summary.json).
+These are training-seed repeats on a fixed data split; the split seed is a
+different quantity (see below).
+
+The ten-fold sweep covers RSC-DETR and the concat baseline. The remaining
+comparison methods are reported on fold 1 only; the per-fold table must not be
+read as a full cross-method benchmark.
 
 Post-hoc measurements recorded in this repository (FP32, batch 1, idle RTX 4090,
 protocol in [docs/BENCHMARK_PROTOCOL.md](docs/BENCHMARK_PROTOCOL.md)) — see
@@ -67,7 +101,10 @@ RSC-DETR/
 │   ├── RSC-DETR_M3FD-LT20.yml          # final M3FD-LT20 config (b8, 45e)
 │   └── RSC-DETR_DVTOD.yml              # final DVTOD config (1088x1920, seed 42)
 ├── weights/                            # released checkpoints (Git LFS, *.pth)
-├── datasets/README.md                  # dataset download & preparation guide
+├── datasets/
+│   ├── README.md                       # dataset download & preparation guide
+│   └── M3FD/reproducibility/           # fixed M3FD-LT20 lists, manifest, counts
+├── scripts/m3fd/                       # split construction, COCO conversion, verification
 ├── tools/
 │   ├── train.py                        # training / evaluation entry point
 │   ├── collect_env.py                  # re-capture the environment lock
@@ -115,7 +152,7 @@ RSC-DETR/
 │   ├── PATHS.md                        # dataset / checkpoint / prediction layout
 │   ├── REPRODUCIBILITY.md              # what exists, what is missing, in what order
 │   ├── BENCHMARK_PROTOCOL.md           # the timing protocol — cite this
-│   └── MULTISEED_PLAN.md               # the not-yet-run multi-seed job
+│   └── MULTISEED_PLAN.md               # multi-seed / 10-fold protocol and results
 ├── LICENSE / NOTICE / LICENSES/        # licensing and third-party notices
 └── MANIFEST.json                       # SHA-256 manifest of the packaged sources
 ```
@@ -200,6 +237,14 @@ python tools/train.py -c configs/RSC-DETR_M3FD-LT20.yml -d cuda --test-only -r w
 python tools/train.py -c configs/RSC-DETR_DVTOD.yml -d cuda --test-only -r weights/dvtod_rscdetr_s42_1920_eval.pth
 ```
 
+`--seed` is the **model-training seed** and is independent of the dataset
+construction. In particular, all M3FD-LT20 runs use the same fixed split
+defined by [`datasets/M3FD/reproducibility/splits/`](datasets/M3FD/reproducibility/splits/);
+the directory name `lt20_seed42` refers to the **data-split sampling seed**, not
+to `--seed`. Training seeds 42, 3407, and 2024 were run on that same split.
+The VEDAI names `s3407` / `seed3407` are likewise training seeds on the
+official fold-1 split.
+
 Recipe summary — VEDAI: dual-stream PResNet-50, 1024 input, batch 4, 30 epochs,
 LR decay at epoch 27. M3FD-LT20: dual-stream PResNet-50, native-resolution
 input/padding, batch 8, 45 epochs, LR decay at epoch 36. DVTOD: dual-stream
@@ -222,8 +267,35 @@ official sources and lay them out as described in
 | M3FD | <https://github.com/JinyuanLiu-CV/TarDAL> (TarDAL, Liu et al., ACCV 2022) |
 
 The COCO-format annotation files used by this project (VEDAI fold-1 / 8-class
-HBB; M3FD-LT20 long-tailed split, seed 42) are prepared from the official
-releases; the conversion rules are documented in the dataset loader sources.
+HBB; M3FD-LT20 long-tailed split) are prepared from the official releases; the
+conversion rules are documented in the dataset loader sources.
+
+### M3FD-LT20 reproducibility package
+
+The fixed split is released under
+[`datasets/M3FD/reproducibility/`](datasets/M3FD/reproducibility/):
+
+| Artefact | Purpose |
+|---|---|
+| `splits/train.txt` (1,428), `splits/val.txt` (420), `splits/test.txt` (419) | The exact image stems used in the paper |
+| `splits/base/` | Pre-long-tail 3,359/420/420 split |
+| `split_manifest.json` | Dataset version, counts, IF, data-split seeds, SHA-256, reconstruction status, dedupe record |
+| `class_counts.csv`, `image_class_counts.csv` | Training distribution audit |
+| `ir_deduplication_report.json` | Why test `00539` was removed |
+| `verify_report.json` | Verification output |
+| [`README.md`](datasets/M3FD/reproducibility/README.md) | Protocol and rebuild commands |
+
+The construction scripts are in [`scripts/m3fd/`](scripts/m3fd/). The split is
+**project-generated**, not an official M3FD split. RGB--IR pairs are the
+sampling unit; multi-class images keep all annotations; class targets are
+optimization references, not hard quotas. The final test set is 419 rather
+than 420 because test `00539` has an IR file byte-identical to validation
+`01300` and is removed with its 14 annotations. File-byte deduplication does
+**not** prove scene-level isolation.
+
+Only the split lists, summaries, and code are released. The per-box COCO JSONs
+are regenerated locally from licensed M3FD data; their SHA-256 values are
+recorded in the manifest and README.
 
 ## Model weights (Git LFS)
 
@@ -286,6 +358,12 @@ python3 evaluation/measure_complexity.py --help
 
 # assemble the DVTOD comparison table
 python3 evaluation/build_dvtod_table.py
+
+# re-derive the VEDAI 10-fold means from the run logs
+python3 evaluation/summarize_vedai_10fold.py --help
+
+# verify the released M3FD-LT20 split against locally generated COCO JSON
+python3 scripts/m3fd/verify_lt20_final.py --help
 ```
 
 Thresholds used by the qualitative renderers are a **confidence threshold of
@@ -304,9 +382,11 @@ still missing, and orders the remaining work. Short version:
 | Software environment | **locked** — `environment/` |
 | Dataset integrity / regression gates | **in place** — `tools/check_dataset.py`, `tests/test_smoke.py` |
 | Timing protocol | **defined** — [docs/BENCHMARK_PROTOCOL.md](docs/BENCHMARK_PROTOCOL.md) |
-| Multi-seed mean ± std | **not yet run** — plan in [docs/MULTISEED_PLAN.md](docs/MULTISEED_PLAN.md) |
-| M3FD-LT20 headline AP | **unresolved** — manuscript says 55.90, the weight log says 55.95 |
-| DVTOD independent test split | **does not exist** — reported numbers are validation numbers |
+| Multi-seed mean ± std | **complete** — VEDAI 57.72 ± 1.77, M3FD-LT20 55.62 ± 0.46, DVTOD 55.45 ± 1.05 (training-only repeats on fixed splits) |
+| VEDAI 10-fold mean ± std | **complete** — 56.42 ± 2.30; concat baseline 56.26 ± 2.00 |
+| M3FD-LT20 fixed split | **released** — [datasets/M3FD/reproducibility/](datasets/M3FD/reproducibility/) |
+| M3FD-LT20 headline AP | **resolved** — 55.90 on the final 419-pair test set (batch-4 re-evaluation); the uniform batch-8 three-seed suite gives 55.95 for the same seed |
+| DVTOD independent test split | **does not exist** — reported numbers are validation numbers; DVTOD multi-seed repeats are validation-only |
 
 Specific caveats about the figures:
 

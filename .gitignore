@@ -20,8 +20,9 @@ Thumbs.db
 .env
 .env.*
 
-# WorkBuddy session data
+# WorkBuddy / Qoder session data
 .workbuddy/
+.qoder-credits/
 
 # Renderer output — figures are regenerated on the experiment server
 out_qual/
@@ -29,11 +30,18 @@ outputs/
 figures/out/
 *.log
 
-# Datasets: ignore the data entities, keep the preparation README
-# (anchored to the repo root so src/data/ — the dataloader sources — stays tracked)
+# Datasets: ignore the data entities, keep the preparation README and the
+# M3FD-LT20 reproducibility record (split lists, manifests, counts, scripts).
+# Anchored to the repo root so src/data/ — the dataloader sources — stays tracked.
 /data/
 datasets/*
 !datasets/README.md
+!datasets/M3FD/
+!datasets/M3FD/reproducibility/
+!datasets/M3FD/reproducibility/**
+datasets/M3FD/raw/
+datasets/M3FD/processed/
+datasets/M3FD/reproducibility/build/
 
 # Experiment artifacts
 runs/

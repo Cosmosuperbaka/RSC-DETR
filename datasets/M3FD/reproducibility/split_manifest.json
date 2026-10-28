@@ -1,0 +1,140 @@
+{
+  "splits": {
+    "train": {
+      "num_images": 1428,
+      "instance_counts": {
+        "0": 4767,
+        "1": 8379,
+        "2": 499,
+        "3": 1657,
+        "4": 407,
+        "5": 697
+      },
+      "image_counts": {
+        "0": 866,
+        "1": 1279,
+        "2": 452,
+        "3": 501,
+        "4": 335,
+        "5": 463
+      },
+      "sha256": "066c7b6d570fa3001f8b68348789d0e2861909283bb4a33c900834b45d6c6dbf"
+    },
+    "val": {
+      "num_images": 420,
+      "instance_counts": {
+        "0": 1175,
+        "1": 2403,
+        "2": 92,
+        "3": 255,
+        "4": 58,
+        "5": 136
+      },
+      "image_counts": {
+        "0": 341,
+        "1": 348,
+        "2": 62,
+        "3": 81,
+        "4": 44,
+        "5": 76
+      },
+      "sha256": "03ccf6f572d26fa3df88fcaea5196aeef2bcce7ae6ea6d55564a1759ad44258f"
+    },
+    "test": {
+      "num_images": 419,
+      "instance_counts": {
+        "0": 1121,
+        "1": 2348,
+        "2": 109,
+        "3": 297,
+        "4": 56,
+        "5": 164
+      },
+      "image_counts": {
+        "0": 337,
+        "1": 343,
+        "2": 75,
+        "3": 84,
+        "4": 43,
+        "5": 82
+      },
+      "sha256": "81326b577accbe015acc18bfc6bdbfb684474160db354dc67d2043a96b5b6f6d"
+    }
+  },
+  "classes": {
+    "0": "People",
+    "1": "Car",
+    "2": "Bus",
+    "3": "Lamp",
+    "4": "Motorcycle",
+    "5": "Truck"
+  },
+  "extra": {
+    "protocol": "M3FD-LT20-seed42-image-pair",
+    "dataset": {
+      "name": "M3FD",
+      "source": "TarDAL (Liu et al., ACCV 2022)",
+      "raw_pairs": 4200,
+      "valid_pairs": 4199,
+      "classes": 6
+    },
+    "split_source": "project_generated_fixed_greedy_multilabel_stratified_split",
+    "actual_imbalance_factor": 20.587223587223587,
+    "reconstruction_verified": true,
+    "random_seeds": {
+      "base_test": 1042,
+      "base_validation": 42,
+      "long_tail_train": 42
+    },
+    "seed_semantics": {
+      "data_split": {
+        "base_validation": 42,
+        "base_test": 1042,
+        "long_tail_train": 42
+      },
+      "note": "All seed values in this manifest are data-split sampling seeds. Model-training seeds (--seed) are independent; the M3FD-LT20 runs use training seeds 42, 3407, and 2024 on this same fixed split. The directory name lt20_seed42 refers to the data-split seed."
+    },
+    "deduplication": {
+      "algorithm": "SHA-256 exact-file deduplication; keep priority val > test > train, then lexical stem",
+      "scope": "RGB and IR checked independently across and within all three subsets; remove entire lower-priority pair on either-modality collision",
+      "removed_samples": [
+        {
+          "stem": "00539",
+          "split": "test",
+          "reason": "byte_identical_ir",
+          "kept_duplicates": [
+            {
+              "modality": "ir",
+              "split": "val",
+              "stem": "01300"
+            }
+          ],
+          "rgb_sha256": "ae60c689dd42963d5a33a2e979126c9b86ecde3b1f8198a46d4578db81cb4795",
+          "ir_sha256": "55d24efe09e7456a60361d908c3307475edc68f45a07bbb819213b70d3c1ff78",
+          "pair_sha256": "db9b01b8406d06406a085cd22385c5f27968397d27e1dbbf7a1f2cb3ba2696fc",
+          "annotation_count": 14
+        }
+      ],
+      "removed_pair_count": 1
+    },
+    "split_list_sha256": {
+      "train": "066c7b6d570fa3001f8b68348789d0e2861909283bb4a33c900834b45d6c6dbf",
+      "val": "03ccf6f572d26fa3df88fcaea5196aeef2bcce7ae6ea6d55564a1759ad44258f",
+      "test": "81326b577accbe015acc18bfc6bdbfb684474160db354dc67d2043a96b5b6f6d"
+    },
+    "annotation_json_sha256": {
+      "train": "4403aca1602dfa69f9b7a1319a47d4742b53ac304c2203f58b5145a93829c8b5",
+      "val": "c3d548bf6c0ede36f34ca37d0ab52893d2b8ae3b15e1a5f81bf774bc0f5d1a55",
+      "test": "9f515d6c251597f10b2f2b2bea8eee33e29db85f5e0f8d4794d8297da534641e"
+    },
+    "validation_long_tail_resampled": false,
+    "test_file_level_ir_repair": true,
+    "byte_hash_check_proves_scene_isolation": false,
+    "invalid_raw_samples": [
+      {
+        "stem": "00375",
+        "issues": "bad_ir:OSError"
+      }
+    ]
+  }
+}

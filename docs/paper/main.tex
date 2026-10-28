@@ -473,14 +473,17 @@ and an imbalanced class distribution in top-down imagery.
 It is used to evaluate the proposed method for long-tailed
 vehicle detection in aerial remote sensing scenarios.
 The input images retain the original resolution of
-$1024\times1024$ pixels. Due to computational resource
-constraints, only the official \textit{fold1} partition is
-used, and no multi-fold averaged results are reported.
+$1024\times1024$ pixels. The primary comparison and ablation
+protocol uses the official \textit{fold1} partition.
 \textit{fold1} contains 1089 training images and 121 held-out
 images. In our experimental protocol, the held-out partition
 is used for both model selection and final evaluation:
 the best model is selected according to validation mAP,
 and its performance is reported on the same partition.
+To verify that the conclusion is not specific to fold1, we
+additionally trained RSC-DETR and the RT-DETR concat baseline on
+all ten official folds with the same training seed; the
+per-fold results are reported in Section~\ref{sec:vedai_results}.
 The dataset comprises eight classes, which are divided
 into head and tail groups using a cumulative training-instance
 frequency threshold of $\tau=0.6$, as shown in
@@ -492,21 +495,55 @@ extending the aerial remote sensing evaluation to
 ground-level road scenarios. LT20 denotes a target
 training-set imbalance factor (IF) of approximately 20,
 defined as the ratio between the instance counts of the
-most and least frequent classes. Long-tail sampling is
-applied only to the training set; the validation and test
-sets are not resampled. Images have a resolution of
-$1024\times768$ pixels. The final training, validation,
-and test sets contain 1428, 420, and 419 image pairs,
-respectively. The training set contains 16,406 instances
-across six classes, with 8379 Car instances and 407
-Motorcycle instances, yielding an actual IF of 20.59.
-The best model is selected according to validation AP
-and evaluated on the independent test set.
+most and least frequent classes. The split is
+project-generated, not an official M3FD split. The raw
+collection contains 4200 RGB--IR pairs; pair 00375 is
+excluded because its IR image is unreadable, leaving 4199
+valid pairs. A fixed base split is built first
+(3359/420/420); its validation and test selections use
+random seeds 42 and 1042, respectively. The long-tailed
+training subset is then sampled from the base training list
+with seed 42. The sampling unit is a complete RGB--IR image
+pair, each pair is selected at most once, and every valid
+annotation in a selected image is retained, including
+co-occurring classes. The per-class targets in the greedy
+objective are optimization references, not hard quotas; no
+boxes are added or removed to meet a target. Long-tail
+sampling is applied only to the training set; the
+validation and test sets are not resampled. Images have a
+resolution of $1024\times768$ pixels.
+
+The final test set contains 419 rather than 420 pairs
+because test pair 00539 has an IR file byte-identical to
+validation pair 01300; 00539 is removed together with its
+14 annotations. This is exact-file deduplication only and
+does not establish scene-level isolation. The final
+training, validation, and test sets contain 1428, 420, and
+419 image pairs, respectively. The training set contains
+16,406 instances across six classes, with 8379 Car
+instances and 407 Motorcycle instances, yielding an actual
+IF of 20.59. The best model is selected according to
+validation AP and evaluated on the independent test set.
 The cumulative training-instance frequency threshold
 $\tau=0.6$ is used only for head--tail performance
-grouping, rather than long-tail dataset construction.
-The training-set class distribution is shown in
-Fig.~\ref{fig:class_distribution}(b).
+grouping, rather than long-tail dataset construction. The
+fixed lists, construction and verification scripts,
+manifests, and count tables are provided in the released
+reproducibility materials. The split seed is a
+data-sampling seed; model-training seeds are independent
+of it.
+
+The comparison table uses model-training seed 42. Repeating
+training with seeds 3407 and 2024 on the same fixed split
+gives 55.83 and 55.09 AP, i.e., 55.62 $\pm$ 0.46 over the
+three seeds, compared with 55.30 $\pm$ 0.41 for the
+RT-DETR concat baseline under the same protocol. (Under the
+uniform batch-8 protocol, the seed-42 value is 55.95; the
+55.90 table entry is the batch-4 re-evaluation. The 0.05
+difference is batching/padding numerics, not a different
+test set.) The single-seed +0.88 AP gap is therefore larger
+than the three-seed mean gap of +0.32 AP. The training-set
+class distribution is shown in Fig.~\ref{fig:class_distribution}(b).
 
 {DVTOD}~\cite{dvtod} is a UAV-based visible--thermal aerial remote sensing
 object detection dataset covering three categories of ground
@@ -541,7 +578,10 @@ both datasets. DVTOD is trained for 15 epochs with a batch
 size of 2 and AMP disabled. Linear warm-up is applied
 for the first 166 iterations, followed by a MultiStepLR
 schedule that reduces the learning rate by a factor of
-0.1 at epoch 13.
+0.1 at epoch 13. The headline runs use training seed 3407
+on VEDAI, 42 on M3FD-LT20, and 42 on DVTOD; the additional
+training seeds used for the variability analysis are stated
+with those results.
 
 Detection performance is evaluated using the COCO evaluation
 protocol. Overall AP and per-class AP are averaged over IoU
@@ -559,8 +599,35 @@ AP-h, AP-t, AR-h, and AR-t. DVTOD is evaluated using
 overall, per-class, and scale-specific AP without
 head--tail grouping.
 
+\paragraph{Reproducibility.}
+The model code, the fixed M3FD-LT20 split lists, the split
+construction and verification scripts, the manifests, and the count tables
+are released at \url{https://github.com/Cosmosuperbaka/RSC-DETR}. The M3FD
+images and per-box annotations are not redistributed; they can be regenerated
+locally from the official TarDAL release following the released README. The
+split is project-generated rather than an official M3FD split.
+
 \subsection{Comparison Results and Analysis on VEDAI}
+\label{sec:vedai_results}
 All comparison and ablation experiments on the VEDAI dataset are conducted on the official \textit{fold1} partition with random seed s3407. All methods are evaluated on the same test set to ensure fair comparison.
+
+To verify that the conclusion is not specific to fold1, we additionally trained RSC-DETR and the RT-DETR concat baseline on all ten official folds with the same training seed. Table~\ref{tab:vedai_10fold} lists the per-fold AP. RSC-DETR obtains 56.42 $\pm$ 2.30 AP over the ten folds, compared with 56.26 $\pm$ 2.00 for the baseline; it improves on 7 of 10 folds, with a mean paired gain of +0.16 AP (paired SD 1.57). The +2.60 AP fold-1 gain is the largest of the ten. The baseline row is a separate ten-fold repeat of the same concat config (fold-1 AP 56.71), not the main-table concat run (57.53); the paired comparison therefore measures run-to-run variability under a common protocol, and the 10-fold means are reported as a robustness check rather than substituted into the main comparison table. The headline 59.31 is a fold-1 result, not a cross-fold expectation. On fold1, three training seeds (42, 3407, and 2024) give 58.04, 59.31, and 55.82 AP, i.e., 57.72 $\pm$ 1.77, which also places the single-seed headline above the seed average.
+
+\begin{table*}[!t]
+\centering
+\caption{Per-fold AP on the ten official VEDAI folds (training seed 3407). Each fold's validation pointer is its held-out test annotation; AP is taken at the best epoch. The last column gives the mean $\pm$ standard deviation over folds.}
+\label{tab:vedai_10fold}
+\setlength{\tabcolsep}{4pt}
+\small
+\begin{tabular}{lccccccccccc}
+\toprule
+Method & F1 & F2 & F3 & F4 & F5 & F6 & F7 & F8 & F9 & F10 & Mean $\pm$ Std \\
+\midrule
+RT-DETR concat & 56.71 & 53.01 & 57.14 & 58.38 & 53.29 & 55.45 & 55.31 & 58.09 & \textbf{58.77} & 56.50 & 56.26 $\pm$ 2.00 \\
+RSC-DETR & \textbf{59.31} & 52.17 & \textbf{58.10} & 55.02 & \textbf{53.95} & \textbf{56.13} & \textbf{55.50} & \textbf{59.03} & 57.96 & \textbf{57.03} & \textbf{56.42 $\pm$ 2.30} \\
+\bottomrule
+\end{tabular}
+\end{table*}
 
 Table~\ref{tab:vedai_accuracy} further reveals the behavior of RSC-DETR across object scales and long-tail groups. The method improves medium-scale detection and produces more balanced performance between head and tail categories. In particular, the improvement for tail categories is more evident than that for head categories, suggesting that the proposed harmonization mechanism redistributes supervision toward underrepresented classes without degrading the recognition of frequent classes. Although the concat baseline remains stronger on the large-object metric, RSC-DETR achieves better overall and strict-IoU performance with lower model complexity. This result indicates that directly concatenating dual-modal features may preserve abundant responses for large objects but also retain redundant or inconsistent information. In contrast, SPSF learns a more compact cross-modal representation, while PFHM and ACRHM improve the reliability of localization and class-specific supervision. The grouped results therefore demonstrate that the performance gain of RSC-DETR arises from coordinated representation learning and supervision calibration rather than from uniformly increasing feature capacity.
 
@@ -579,9 +646,13 @@ final performance reporting.
 Table~\ref{tab:m3fd_comparison} summarizes the overall,
 per-class, scale-specific, and head--tail-grouped results
 on M3FD-LT20. RSC-DETR achieves the highest overall AP of
-55.90 and performs particularly well on Car, People, and
-Motorcycle, while maintaining competitive performance on
-the remaining categories. The improvement on Motorcycle
+55.90 in the single-seed (42) run and performs particularly well on Car,
+People, and Motorcycle, while maintaining competitive performance on
+the remaining categories. Under the three-seed protocol on the same
+fixed split and final test set, RSC-DETR obtains 55.62 $\pm$ 0.46 AP,
+compared with 55.30 $\pm$ 0.41 for the concat baseline; the table
+therefore reports seed 42, while the three-seed comparison is stated
+in the text. The improvement on Motorcycle
 is especially relevant to long-tailed detection because
 this category contains relatively few training instances.
 Compared with RT-DETR concat, the gain is greater at
@@ -617,7 +688,7 @@ remains a direction for further improvement.
 \end{figure*}
 
 
-\setcounter{table}{2}
+\setcounter{table}{3}
 \begin{table*}[!t]
 \centering
 \caption{Overall accuracy, per-class AP, scale-grouped, and head--tail-grouped results on M3FD-LT20. Bold values indicate the best result in each metric column.}
@@ -762,7 +833,7 @@ Ours
 \vspace{-6pt}
 \end{table*}
 
-\setcounter{table}{4}
+\setcounter{table}{5}
 \begin{table*}[!t]
 \centering
 \caption{Ablation study on VEDAI. Bold numbers denote the best results.}
@@ -892,7 +963,7 @@ remain areas for further improvement.
     (f) Residual difference between matcher-weight and classification-weight
     changes, showing that the two weighting branches remain closely aligned
     while retaining small class- and stage-dependent deviations.}
-\label{fig:qualitative_dvtod}
+\label{fig:acrhm_behavior}
 \end{figure*}
 
 Figure~\ref{fig:qualitative_dvtod} provides a qualitative
@@ -941,10 +1012,10 @@ As shown in Table~\ref{tab:spsf_alpha_sensitivity}, increasing $\alpha_s$ can im
 \section{Discussion}
 The core dilemma of long-tailed RGB--IR remote sensing detection lies in the inherent tension among the optimization objectives of cross-modal alignment, high-precision localization, and long-tail calibration. Existing methods often introduce auxiliary supervision to alleviate long-tail bias, but they mostly adopt static weighting strategies that implicitly assume the feature distribution and task difficulty remain stable during training. The shared--private feature fusion module introduced in this paper significantly improves localization accuracy, but the feature distribution drift it induces breaks this static assumption. In the drifted feature space, the geometric-consistency supervision designed for the original feature space and the reliability reweighting based on static statistics are no longer compatible; the two produce antagonism in the gradient space, leading to systematic bias in the confidence estimation of tail classes. This is precisely the fundamental reason why simply stacking modules leads to performance regression. The above phenomenon indicates that the effectiveness of auxiliary supervision depends heavily on the evolution state of the main-branch feature space, and static weights cannot cope with the dynamic changes of the representation structure. To this end, the dynamic harmonization strategy proposed in this paper abandons the fixed-weight paradigm and instead corrects the training dynamics according to the temporal law of feature maturation. This mechanism suppresses unreliable auxiliary supervision in the early training stage to accommodate the distribution drift, and releases the gradients in the later stage to lock in the tail-class discriminative features, thereby achieving collaborative optimization of localization accuracy and long-tail recognition.
 
-The current validation is carried out on VEDAI and M3FD-LT20. Although it can support the above mechanism analysis, it still lacks cross-sensor generalization and adaptability to complex weather conditions. Due to computational resource constraints, VEDAI uses only the fold1 single partition for training and evaluation, and the stability of the model under extremely small-sample conditions has not been further confirmed through multi-fold cross-validation. In addition, the dynamic harmonization relies on training-annotation statistics and online state estimation; we have not validated the method under conditions more extreme than the current benchmarks, such as few-shot scenarios or strong annotation noise, and the stability of the reliability estimation in such scenarios still requires further investigation.
+The current validation is carried out on VEDAI and M3FD-LT20. Although it can support the above mechanism analysis, it still lacks cross-sensor generalization and adaptability to complex weather conditions. The main comparison and ablation tables use the VEDAI fold1 partition; to check fold sensitivity, we additionally report a ten-fold sweep of RSC-DETR and the RT-DETR concat baseline. The remaining comparison methods are not re-trained on all folds, so a full cross-method ten-fold ranking remains future work. The M3FD-LT20 split is project-generated and fixed across training seeds; the three-seed results indicate that the single-seed gain should be interpreted together with seed variability. In addition, the dynamic harmonization relies on training-annotation statistics and online state estimation; we have not validated the method under conditions more extreme than the current benchmarks, such as few-shot scenarios or strong annotation noise, and the stability of the reliability estimation in such scenarios still requires further investigation.
 
 \section{Conclusion}
-This paper proposes RSC-DETR, a unified framework for long-tailed RGB--IR object detection that harmonizes cross-modal feature fusion, localization-quality supervision, and class-reliability calibration. Through the joint optimization of shared--private symmetric fusion, prototype-guided fine-localization harmonization, and annotation-guided class-reliability harmonization, RSC-DETR alleviates cross-modal representation interference, classification--localization inconsistency, and unreliable supervision for underrepresented categories. Experiments on VEDAI and M3FD-LT20 demonstrate that RSC-DETR achieves AP scores of 59.31 and 55.90, respectively, while providing consistent improvements in overall detection accuracy, tail-category recognition, and strict-IoU localization without altering the original RT-DETR inference pathway. Future work will extend the evaluation to multi-sensor and adverse-weather scenarios, investigate high-resolution feature enhancement for extremely small objects, and develop uncertainty-guided noise-robust training strategies to improve generalization in complex open-world environments.
+This paper proposes RSC-DETR, a unified framework for long-tailed RGB--IR object detection that harmonizes cross-modal feature fusion, localization-quality supervision, and class-reliability calibration. Through the joint optimization of shared--private symmetric fusion, prototype-guided fine-localization harmonization, and annotation-guided class-reliability harmonization, RSC-DETR alleviates cross-modal representation interference, classification--localization inconsistency, and unreliable supervision for underrepresented categories. Experiments on VEDAI and M3FD-LT20 demonstrate that RSC-DETR achieves AP scores of 59.31 and 55.90 on the fold-1 VEDAI protocol and the M3FD-LT20 test protocol, together with a 56.42 $\pm$ 2.30 ten-fold VEDAI mean, while providing consistent improvements in overall detection accuracy, tail-category recognition, and strict-IoU localization without altering the original RT-DETR inference pathway. Future work will extend the evaluation to multi-sensor and adverse-weather scenarios, investigate high-resolution feature enhancement for extremely small objects, and develop uncertainty-guided noise-robust training strategies to improve generalization in complex open-world environments.
 
 \begin{thebibliography}{99}
 \bibitem{rtdetr}

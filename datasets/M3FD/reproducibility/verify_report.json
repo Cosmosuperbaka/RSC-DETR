@@ -1,0 +1,59 @@
+{
+  "counts": {
+    "train": {
+      "pairs": 1428,
+      "annotations": 16406,
+      "class_instances": {
+        "0": 4767,
+        "1": 8379,
+        "2": 499,
+        "3": 1657,
+        "4": 407,
+        "5": 697
+      }
+    },
+    "val": {
+      "pairs": 420,
+      "annotations": 4119,
+      "class_instances": {
+        "0": 1175,
+        "1": 2403,
+        "2": 92,
+        "3": 255,
+        "4": 58,
+        "5": 136
+      }
+    },
+    "test": {
+      "pairs": 419,
+      "annotations": 4095,
+      "class_instances": {
+        "0": 1121,
+        "1": 2348,
+        "2": 109,
+        "3": 297,
+        "4": 56,
+        "5": 164
+      }
+    }
+  },
+  "actual_imbalance_factor": 20.587223587223587,
+  "hashes": {
+    "train": {
+      "list_sha256": "066c7b6d570fa3001f8b68348789d0e2861909283bb4a33c900834b45d6c6dbf",
+      "annotation_json_sha256": "4403aca1602dfa69f9b7a1319a47d4742b53ac304c2203f58b5145a93829c8b5"
+    },
+    "val": {
+      "list_sha256": "03ccf6f572d26fa3df88fcaea5196aeef2bcce7ae6ea6d55564a1759ad44258f",
+      "annotation_json_sha256": "c3d548bf6c0ede36f34ca37d0ab52893d2b8ae3b15e1a5f81bf774bc0f5d1a55"
+    },
+    "test": {
+      "list_sha256": "81326b577accbe015acc18bfc6bdbfb684474160db354dc67d2043a96b5b6f6d",
+      "annotation_json_sha256": "9f515d6c251597f10b2f2b2bea8eee33e29db85f5e0f8d4794d8297da534641e"
+    }
+  },
+  "duplicate_file_bytes": false,
+  "errors": [],
+  "ok": true,
+  "scope_note": "File-byte hash checks do not establish scene-level isolation."
+}
