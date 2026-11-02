@@ -28,6 +28,7 @@ Thumbs.db
 out_qual/
 outputs/
 figures/out/
+figures/m3fd_20261024/
 *.log
 
 # Datasets: ignore the data entities, keep the preparation README and the
