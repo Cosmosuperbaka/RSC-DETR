@@ -47,8 +47,9 @@ cross-fold or cross-seed estimate. The complete runs give:
 | DVTOD | validation, training seeds 42 / 3407 / 2024 | 55.45 ± 1.05 |
 
 The ten-fold result is the more robust VEDAI estimate. RSC-DETR improves on 7
-of 10 folds, with a mean paired gain of +0.16 AP (paired SD 1.57) over the
-concat baseline; the +2.60 AP fold-1 gain is the largest of the ten. The
+of 10 folds over the concat baseline, with a mean paired gain of +0.16 AP and a
+paired SD of 1.57 (paired t ≈ 0.31, n = 10 — the sweep shows no statistically
+detectable mean gain); the +2.60 AP fold-1 gain is the largest of the ten. The
 baseline row in the 10-fold summary is a separate repeat of the concat config
 (fold-1 AP 56.71), not the main-table concat run (57.53); the paired ten-fold
 comparison is therefore a run-to-run variability study, not a re-use of the
@@ -63,6 +64,17 @@ different quantity (see below).
 The ten-fold sweep covers RSC-DETR and the concat baseline. The remaining
 comparison methods are reported on fold 1 only; the per-fold table must not be
 read as a full cross-method benchmark.
+
+Scope of what is verifiable from this repository: all **ten** official folds
+(1-10) were trained and scored, each with training seed 3407; a description of
+this sweep as covering only a subset of folds (for example the odd-numbered
+ones) would be incorrect. What is shipped here is the *parsed* summary:
+`evaluation/summarize_vedai_10fold.py` reads the per-fold run logs on the
+experiment server
+(`results/VEDAI/v19c-spsf-s3407-10fold/fold02..fold10/log.txt`), and only the
+fold-1 and fold-2 checkpoints are released through Git LFS. The fold-3-10
+numbers can therefore be recomputed only with server access to those logs; they
+are recorded in the reports and registry, not reproducible from the public tree.
 
 Post-hoc measurements recorded in this repository (FP32, batch 1, idle RTX 4090,
 protocol in [docs/BENCHMARK_PROTOCOL.md](docs/BENCHMARK_PROTOCOL.md)) — see

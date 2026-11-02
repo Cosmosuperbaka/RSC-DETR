@@ -73,13 +73,18 @@ runs:
     # but that directory is empty on the server — the concat-baseline 10-fold
     # checkpoints live under baseline-10fold/ (fold-1 best epoch AP 56.71)
     weights: "results/VEDAI/baseline-10fold/baseline-fold1/best.pth"
-    log: TODO
+    log: TODO  # metrics below come from the parsed ten-fold report, not from a copied-out log
     metrics:
-      AP: TODO
-      AP50: TODO
-      AP75: TODO
+      AP: 56.710        # best epoch 25; from vedai_10fold_summary.json (parsed from the run log)
+      AP50: 86.612
+      AP75: 66.890
     hashes: {config: TODO, weights: TODO, predictions: TODO}
     status: partial
+    note: >
+      Fold-1 member of the baseline ten-fold repeat set. Its AP is 56.71, not the
+      main-table concat run (57.53); the two are different runs of the same
+      config, which is why the paired ten-fold comparison is a run-variability
+      study rather than the headline baseline.
 
   - id: vedai-rscdetr-fold01
     dataset: vedai
@@ -118,9 +123,9 @@ runs:
     lfs_release: "weights/vedai_rscdetr_fold02_s3407_1024_eval.pth"
     log: "results/VEDAI/v19c-spsf-s3407-10fold/fold02/log.txt"
     metrics:
-      AP: TODO
-      AP50: TODO
-      AP75: TODO
+      AP: 52.167        # best epoch 24, from vedai_10fold_summary.json (parsed from the run log)
+      AP50: 80.323
+      AP75: 61.004
     hashes:
       config: TODO
       weights: 1258aefd5dccf40f5deda8d418c74433b58a8aa814b74bf61889351bcc4f3caf   # LFS copy, server==client verified 2026-10-10
@@ -128,6 +133,9 @@ runs:
     status: partial
     note: >
       10-fold member (fold 2). Released alongside the headline fold-1 weights.
+      The config field keeps the fold-01 filename as recorded by the run; the
+      per-fold config actually used (fold-02 annotation pointer) is TODO and
+      needs to be copied out of the run directory on the server.
 
   - id: m3fd-rscdetr
     dataset: m3fd_lt20
@@ -211,12 +219,35 @@ completed:
 
   - id: vedai-10fold
     seeds: [3407]
+    folds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     protocol: "official VEDAI folds 1-10; val_dataloader of each fold points at that fold's held-out test annotation; best-epoch AP"
     results:
       rsc_detr: {mean_AP: 56.419, std_AP: 2.305, n: 10}
       concat_baseline: {mean_AP: 56.265, std_AP: 2.003, n: 10}
+    per_fold_AP:
+      # copied out of evaluation/reports/vedai_10fold_summary.json, which
+      # evaluation/summarize_vedai_10fold.py generates from the run logs
+      rsc_detr:
+        {1: 59.311, 2: 52.167, 3: 58.101, 4: 55.022, 5: 53.945,
+         6: 56.127, 7: 55.504, 8: 59.030, 9: 57.960, 10: 57.026}
+      concat_baseline:
+        {1: 56.710, 2: 53.010, 3: 57.140, 4: 58.376, 5: 53.288,
+         6: 55.453, 7: 55.310, 8: 58.088, 9: 58.768, 10: 56.503}
+    paired_difference: {mean_AP: 0.155, std_AP: 1.569, wins: 7, n: 10}
+    logs: "results/VEDAI/v19c-spsf-s3407-10fold/fold02..fold10/log.txt (experiment server, not shipped)"
+    released_weights: [vedai_rscdetr_fold01_s3407_1024_eval.pth, vedai_rscdetr_fold02_s3407_1024_eval.pth]
     report: evaluation/reports/vedai_10fold_summary.json
     status: complete
+    note: >
+      All ten folds are trained and scored, so the sweep is not partial and must
+      not be reported as an odd-fold subset. Scope of what a reader can verify:
+      folds 3-10 have no released checkpoint and no shipped log, so their APs are
+      recorded values; fold 1 is re-scorable from the released weights via
+      tools/eval_released.py. The paired mean gain of +0.16 AP has a paired SD of
+      1.57 over ten folds (paired t ~ 0.31) — no statistically detectable mean
+      gain, and each fold is a single training seed. Fold 4 peaks at epoch 8 of 30
+      and drives the -3.35 AP deficit; re-check that run against its log before
+      the table is quoted further.
 
   - id: latency
     reason: "resolved 2026-10-12: recorded on an idle RTX 4090 per the protocol"

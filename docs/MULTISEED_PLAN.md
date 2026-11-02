@@ -20,12 +20,20 @@ train/validation split. Only the model-training seed changes.
 
 The 10-fold RSC-DETR values are 59.31, 52.17, 58.10, 55.02, 53.95, 56.13,
 55.50, 59.03, 57.96, 57.03. RSC-DETR is better than the concat baseline on 7 of
-10 folds; the mean paired gain is +0.16 AP (paired SD 1.57). The baseline row
+10 folds; the mean paired gain is +0.16 AP with a paired SD of 1.57 (paired
+t ≈ 0.31 at n = 10 — the sweep therefore shows no statistically detectable mean
+gain, only the absence of a systematic loss). The baseline row
 is a separate ten-fold repeat of the concat config (fold-1 AP 56.71), not the
 main-table concat run (57.53); the paired comparison measures run-to-run
 variability under a common protocol. The fold-1 +2.60 gain is the largest of
 the ten, which is why the headline 59.31 must not be read as a cross-fold
 expectation.
+
+Two caveats on the sweep itself. First, every fold is a single training seed
+(3407), so the fold-to-fold spread mixes method and fold effects. Second, the
+fold-4 RSC-DETR run peaks at epoch 8 of 30 (AP 55.02); that early peak produces
+the −3.35 AP outlier and is the one per-fold value that should be re-checked
+against its run log before the table is quoted further.
 
 The M3FD-LT20 three-seed values are 55.945 / 55.833 / 55.090 for seeds
 42 / 3407 / 2024, measured with the same final test set, checkpoint-selection
@@ -36,6 +44,17 @@ re-evaluation and differs from the batch-8 seed-42 value by 0.05 AP
 Sources: `evaluation/reports/multiseed_and_10fold_summary.json`,
 `evaluation/reports/vedai_10fold_summary.json`, per-run logs on the experiment
 server. M3FD split details: `datasets/M3FD/reproducibility/README.md`.
+
+## Coverage and verifiability
+
+All ten official VEDAI folds (1-10) were trained and scored for both RSC-DETR
+and the concat baseline. This is not a partial or odd-fold-only sweep, and the
+manuscript must not describe it as one. What the public repository ships is the
+parsed summary: `evaluation/summarize_vedai_10fold.py` reads the per-fold run
+logs on the experiment server, and only the fold-1 and fold-2 checkpoints are
+released through Git LFS. A reader without server access can re-score fold 1
+from the released weights (`tools/eval_released.py`); the fold-3-10 values are
+recorded, not independently recomputable from the public tree.
 
 ---
 
