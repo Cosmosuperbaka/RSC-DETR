@@ -94,5 +94,6 @@ cell like `12.3 ms` with no conditions attached is not acceptable; put the
 conditions in the caption.
 
 Params and GFLOPs come from `evaluation/measure_complexity.py`, which counts
-them without running the model. Latency comes from this protocol. Do not mix
-the two sources in one column without saying so.
+them over a single inference-mode forward pass. Latency comes from this
+protocol; the latency field that script also prints is not a protocol number.
+Do not mix the two sources in one column without saying so.

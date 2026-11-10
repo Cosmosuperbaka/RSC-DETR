@@ -175,7 +175,7 @@ def main() -> None:
         "protocol": "M3FD-LT20-seed42-image-pair",
         "dataset": {
             "name": "M3FD",
-            "source": "TarDAL (Liu et al., ACCV 2022)",
+            "source": "TarDAL (Liu et al., CVPR 2022)",
             "raw_pairs": 4200,
             "valid_pairs": sum(1 for record in records if not record["issues"]),
             "classes": 6,

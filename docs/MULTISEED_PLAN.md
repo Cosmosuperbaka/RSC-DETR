@@ -115,7 +115,7 @@ multi-seed. Ablations can follow once the main table is stable.
 ```bash
 # one seed per GPU; the host has eight, so a dataset finishes in one wave
 for seed in 3407 42 2024; do
-  CUDA_VISIBLE_DEVICES=$GPU python3 rdetrv2_pytorch/tools/train.py \
+  CUDA_VISIBLE_DEVICES=$GPU python3 rtdetrv2_pytorch/tools/train.py \
       -c <config with that seed> --seed $seed \
       -t <output dir>/seed_$seed
 done

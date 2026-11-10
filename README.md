@@ -23,8 +23,8 @@ Reported results (AP, %):
 
 | Dataset | Backbone-scale setting | AP | AP₅₀ | AP₇₅ | Params (M) | GFLOPs |
 |---|---|---|---|---|---|---|
-| VEDAI | 1024 | **59.31** | — | — | 89.6 | 748 |
-| M3FD-LT20 | 1024 | **55.90** | — | — | — | — |
+| VEDAI | 1024 | **59.31** | 88.53 | 71.47 | 89.6 | 748 |
+| M3FD-LT20 | 1024 | **55.90** | 84.09 | 60.51 | — | — |
 | DVTOD | 1920 | **56.66** | 89.49 | 61.21 | 90.10 | 1485.5 |
 
 The single-run RT-DETR concat baseline is improved by +1.78 / +0.88 / +0.40 AP
@@ -121,23 +121,23 @@ RSC-DETR/
 │   ├── train.py                        # training / evaluation entry point
 │   ├── collect_env.py                  # re-capture the environment lock
 │   ├── check_dataset.py                # dataset integrity gate
+│   ├── eval_released.py                # re-score a released checkpoint, write a hashed report
 │   └── hash_artifacts.py               # SHA-256 manifests for run directories
 ├── rscdetr_paths.py                    # every experiment path, env-var driven
 ├── figures/
 │   ├── render_fig1_motivation.py       # Fig. 1  (cross-modal confidence gap)
 │   ├── render_vedai_qualitative.py     # Fig. 7  (VEDAI qualitative comparison)
 │   ├── render_m3fd_qualitative.py      # Fig. 8  (M3FD-LT20 qualitative comparison)
-│   ├── render_dvtod_qualitative.py     # Fig. 9  (DVTOD qualitative comparison)
-│   └── legacy/                         # earlier renderers, kept for provenance
+│   └── render_dvtod_qualitative.py     # Fig. 9  (DVTOD qualitative comparison)
 ├── evaluation/
 │   ├── eval_coco_preds.py              # COCO AP / AP50 / AP75 and per-class AP
 │   ├── build_dvtod_table.py            # assembles the DVTOD comparison table
 │   ├── measure_complexity.py           # Params / GFLOPs / latency
 │   ├── summarize_yolo_compare_coco.py  # aggregates YOLO-family comparison runs
-│   └── predict_yolo_best.py            # runs inference from a YOLO best.pt
+│   ├── summarize_vedai_10fold.py       # parses the per-fold run logs into the 10-fold summary
+│   ├── predict_yolo_best.py            # runs inference from a YOLO best.pt
+│   └── reports/                        # recorded re-evaluation, complexity, latency, multi-seed and 10-fold results
 ├── analysis/
-│   ├── plot_error_composition.py       # error-composition breakdown
-│   ├── plot_paper_analysis_candidates.py
 │   ├── generate_combined_distribution.py  # class-distribution figure
 │   ├── infer_scene000004_baseline.py
 │   ├── prepare_dvtod_compare.py
@@ -158,7 +158,7 @@ RSC-DETR/
 ├── tests/
 │   └── test_smoke.py                   # pytest regression gate
 ├── docs/
-│   ├── paper/main.tex                  # the manuscript source
+│   ├── paper/main.tex                  # the manuscript source (figure image files not included)
 │   ├── FINAL_VERSION_AUDIT.json        # source-file / class-name mapping record
 │   ├── VALIDATION.json                 # packaging validation record
 │   ├── PATHS.md                        # dataset / checkpoint / prediction layout
@@ -166,7 +166,7 @@ RSC-DETR/
 │   ├── BENCHMARK_PROTOCOL.md           # the timing protocol — cite this
 │   └── MULTISEED_PLAN.md               # multi-seed / 10-fold protocol and results
 ├── LICENSE / NOTICE / LICENSES/        # licensing and third-party notices
-└── MANIFEST.json                       # SHA-256 manifest of the packaged sources
+└── MANIFEST.json                       # SHA-256 manifest of the packaged model sources (src/, VEDAI and M3FD-LT20 configs, tools/train.py, licences)
 ```
 
 **Start with [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md)** if you are
@@ -269,18 +269,20 @@ reproduces the reported evaluation numbers under `--test-only`.
 
 ## Datasets
 
-Neither dataset is redistributed with this repository. Download them from the
-official sources and lay them out as described in
+None of the three datasets is redistributed with this repository. Download them
+from the official sources and lay them out as described in
 [datasets/README.md](datasets/README.md):
 
 | Dataset | Official source |
 |---|---|
-| VEDAI | <https://downloads.greyc.fr/vedai/> (GREYC, Razakarivony & Jurie 2015) |
-| M3FD | <https://github.com/JinyuanLiu-CV/TarDAL> (TarDAL, Liu et al., ACCV 2022) |
+| VEDAI | <https://downloads.greyc.fr/vedai/> (GREYC, Razakarivony & Jurie 2016) |
+| M3FD | <https://github.com/JinyuanLiu-CV/TarDAL> (TarDAL, Liu et al., CVPR 2022) |
+| DVTOD | <https://github.com/VDT-2048/DVTOD> (Song et al., IEEE T-IV 2024) |
 
 The COCO-format annotation files used by this project (VEDAI fold-1 / 8-class
-HBB; M3FD-LT20 long-tailed split) are prepared from the official releases; the
-conversion rules are documented in the dataset loader sources.
+HBB; M3FD-LT20 long-tailed split; DVTOD three-class train/validation) are
+prepared from the official releases; the conversion rules are documented in the
+dataset loader sources.
 
 ### M3FD-LT20 reproducibility package
 

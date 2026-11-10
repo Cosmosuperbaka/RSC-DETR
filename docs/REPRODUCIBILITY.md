@@ -22,8 +22,8 @@ Last audited: **2026-10-28**, against the live experiment server and the release
 | Item | Status | Where it lives / what is missing |
 |---|---|---|
 | Fold-1 split definition | ✅ | `datasets/VEDAI/annotations/vedai_fold01_test_class8.json` |
-| Training config | ✅ | `rtdetrv2_pytorch/configs/rtdetrv2/rtdetrv2_r50vd_vedai_*.yml` |
-| Released weights | ✅ | `results/VEDAI/<run>/` |
+| Training config | ✅ | `configs/RSC-DETR_VEDAI.yml` (shipped final config); server originals `rtdetrv2_pytorch/configs/rtdetrv2/rtdetrv2_r50vd_vedai_*.yml` |
+| Released weights | ✅ | `weights/vedai_rscdetr_fold0{1,2}_s3407_1024_eval.pth` (Git LFS); server run directories `results/VEDAI/<run>/` |
 | AP / AP50 / AP75 | ✅ | manuscript Table; `evaluation/eval_coco_preds.py` recomputes |
 | Params / GFLOPs | ✅ | `evaluation/measure_complexity.py` |
 | Ablation results | ✅ | `results/VEDAI/` (no-spsf, no-x1-gate, no-x3-gate) |
@@ -42,14 +42,14 @@ Last audited: **2026-10-28**, against the live experiment server and the release
 |---|---|---|
 | **Fixed split lists + construction scripts** | ✅ (2026-10-28) | `datasets/M3FD/reproducibility/splits/{train,val,test}.txt` (1,428 / 420 / 419), base lists in `splits/base/`, scripts in `scripts/m3fd/`, manifest and counts in `datasets/M3FD/reproducibility/`. Data-split seeds: validation 42, test 1042, LT20 train 42; these are **not** model-training seeds. |
 | train/val/test split | ✅ | `datasets/M3FD/reproducibility/splits/` (released) and `datasets/M3FD/processed/lt20_seed42/` (generated COCO + image links on the server) |
-| Training config | ✅ | `rtdetrv2_pytorch/configs/rtdetrv2/rtdetrv2_r50vd_m3fd_lt20_*.yml` |
+| Training config | ✅ | `configs/RSC-DETR_M3FD-LT20.yml` (shipped final config); server originals `rtdetrv2_pytorch/configs/rtdetrv2/rtdetrv2_r50vd_m3fd_lt20_*.yml` |
 | Released weights | ✅ | see `registry/experiments.yaml` |
 | Weight provenance log | ✅ | run logs next to each checkpoint |
 | Overall + per-class metrics | ✅ | manuscript Table |
 | Scale and head/tail metrics | ✅ | manuscript Table |
 | Qualitative figure | ✅ | `figures/render_m3fd_qualitative.py` |
 | **Single authoritative AP (55.90 vs 55.95)** | ✅ (2026-10-28) | **Resolved without a data change.** Both values describe the final 419-pair test set. **55.90** is the batch-4 re-evaluation of the released checkpoint (`outputs/m3fd_lt20_s42_b8_valbest_test_requested/v19c_spsf/per_class.json`, AP 55.897); that script ran while the test JSON still contained `00539`, but the predictions contain no `00539` boxes, and recomputing against the 419-pair GT gives AP 55.9. **55.95** is the same checkpoint under the uniform batch-8 suite used for all three seeds (`experiments_20261024/predictions/clean_RSC_DETR_s42/per_class.json`, AP 55.945). The 0.05 difference is batching/padding numerics, not split membership. The manuscript keeps **55.90** as the headline and reports **55.62 ± 0.46** for the uniform three-seed suite. |
-| **Params / GFLOPs column** | ✅ (2026-10-12) | Measured at the protocol resolution 1024×1024: **90.10 M / 747.0 GFLOPs** — `evaluation/reports/complexity_m3fd.json`. (VEDAI and DVTOD re-measured in the same pass and match the manuscript: 90.11 M / 747.1 G and 90.10 M / 1485.5 G.) |
+| **Params / GFLOPs column** | ✅ (2026-10-12) | Measured at the protocol resolution 1024×1024: **90.10 M / 747.0 GFLOPs** — `evaluation/reports/complexity_m3fd.json`. (VEDAI and DVTOD were re-measured in the same pass: DVTOD gives 90.10 M / 1485.5 G, matching the manuscript; VEDAI gives 90.11 M / 747.1 G, whereas the manuscript's VEDAI ablation table lists 89.6 M / 748 G — a difference of about 0.5 M parameters that is recorded here, not reconciled.) |
 | **Multi-seed mean ± std** | ✅ (2026-10-24) | Training seeds 42 / 3407 / 2024 on the fixed `lt20_seed42` split; final 419-pair test, uniform batch-8 re-evaluation of each best checkpoint: **55.62 ± 0.46** (55.945 / 55.833 / 55.090). Concat baseline on the same protocol: **55.30 ± 0.41**. — `evaluation/reports/multiseed_and_10fold_summary.json`, predictions under `experiments_20261024/predictions/clean_{RSC_DETR,Concat}_s*`. |
 | **Latency and peak memory** | ✅ (2026-10-12) | Same protocol, 1024×1024: **median 37.70 ms (26.5 fps), peak ~0.8 GiB** — `evaluation/reports/latency_m3fd.json`. 🔒 was resolved on an idle card (GPU util 0%, 4 MiB in use). |
 | **Software lock** | ✅ | see `environment/` |
@@ -73,7 +73,7 @@ Last audited: **2026-10-28**, against the live experiment server and the release
 | **Hashes for config / checkpoint / predictions** | ✅ (2026-10-12) | `registry/experiments.yaml` records SHA-256 for `configs/RSC-DETR_DVTOD.yml`, the LFS checkpoint copy and `perclass_sh_c2_best/predictions.json`. |
 | **Explicit random seed** | ✅ (2026-10-28) | Seed 42 is in every config filename and log, and the manuscript now states the training seeds explicitly (3407 VEDAI / 42 M3FD-LT20 / 42 DVTOD, plus the additional variability seeds). |
 | **Multi-seed mean ± std** | ✅ (2026-10-14) | Seeds 42 / 3407 / 2024 trained; val AP **55.45 ± 1.05** — `evaluation/reports/multiseed_and_10fold_summary.json`. |
-| **Latency and peak memory** | ✅ (2026-10-12) | Same protocol, 1088×1920: **median 61.33 ms (16.3 fps), peak ~1.6 GiB** — `evaluation/reports/latency_dvtod.json`. |
+| **Latency and peak memory** | ✅ (2026-10-12) | Same protocol, 1088×1920: **median 61.33 ms (16.3 fps), peak ~1.2 GiB** — `evaluation/reports/latency_dvtod.json`. |
 
 ---
 
@@ -105,7 +105,7 @@ Mirrors the priority list, with the current blocker called out for each step.
 | 4 | Lock the software environment | **done** | — |
 | 5 | Stand up benchmarking and regression testing | **done** (2026-10-12) — latency + complexity recorded on an idle RTX 4090 for all three datasets | — |
 
-Steps 1, 2, 3 and 5 are **all complete** — multi-seed and the full 10-fold
+Steps 1–5 are **all complete** — multi-seed and the full 10-fold
 sweep were trained and scored 2026-10-12/14. The only remaining structural
 gap is the DVTOD independent test split, which requires re-scoring every
 method against a split that does not exist yet. No bookkeeping debt is left.

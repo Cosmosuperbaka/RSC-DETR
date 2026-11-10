@@ -1,12 +1,4 @@
 {
-  ".gitattributes": {
-    "bytes": 382,
-    "sha256": "68bbf132862a2c630c1690a5c2b1c73673cc11b56e513b042c6b4e28c659e0e1"
-  },
-  ".gitignore": {
-    "bytes": 891,
-    "sha256": "7fb659a2c8d3962e3193b402adf087e3fecb0bb74caf95963f04feff5adeff93"
-  },
   "LICENSE": {
     "bytes": 581,
     "sha256": "51ed4fdfd42ffcb081cb45fad77115b1429c7ef9b61ce6e2db7ef1444200d2a6"
@@ -23,10 +15,6 @@
     "bytes": 809,
     "sha256": "3e4c36c39464b79c922a93a6d95ea38c96227c41ca285ad2526e53979202aff5"
   },
-  "README.md": {
-    "bytes": 16918,
-    "sha256": "2c275bd8e67ee72d029f42831691be02a7a4b6381912dd89c83107dacce8d4ea"
-  },
   "THIRD_PARTY_NOTICES.md": {
     "bytes": 2006,
     "sha256": "156477b86fdac57acf37540bffeae812fbf1e1fa15bb9c4794a541e8781aa0db"
@@ -39,10 +27,6 @@
     "bytes": 5690,
     "sha256": "2d4fe684f9af59e2a7a9eab7fa4838c399ab1504f04c6ddf351a87d8394f7973"
   },
-  "datasets/README.md": {
-    "bytes": 2689,
-    "sha256": "2548c3f025b713f87af1a5c792c360269e5910bb2315fd98849d364b1c7a556d"
-  },
   "docs/FINAL_VERSION_AUDIT.json": {
     "bytes": 14541,
     "sha256": "527405def8ee3b1a8078eb20e9fc2993e506ced99f9a8ce6de6450158d7c11bd"
@@ -50,10 +34,6 @@
   "docs/VALIDATION.json": {
     "bytes": 2592,
     "sha256": "aaf5433157656bf449f77717f7c7670d080b735172db2a0730f646018abf6354"
-  },
-  "docs/paper/main.tex": {
-    "bytes": 90157,
-    "sha256": "228b914e823906639cdd379bf88e3f75189692a9c661d45ffe9766bb3360fa3e"
   },
   "requirements.txt": {
     "bytes": 1503,

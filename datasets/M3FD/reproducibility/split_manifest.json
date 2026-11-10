@@ -73,7 +73,7 @@
     "protocol": "M3FD-LT20-seed42-image-pair",
     "dataset": {
       "name": "M3FD",
-      "source": "TarDAL (Liu et al., ACCV 2022)",
+      "source": "TarDAL (Liu et al., CVPR 2022)",
       "raw_pairs": 4200,
       "valid_pairs": 4199,
       "classes": 6
